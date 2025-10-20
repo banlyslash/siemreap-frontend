@@ -2,11 +2,9 @@
 
 import { useQuery } from "@apollo/client/react";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { GET_LEAVE_BALANCES, GET_LEAVE_TYPES } from "@/lib/leave/leaveQueries";
-import { LeaveBalancesResponse, LeaveTypesResponse } from "@/lib/leave/graphqlTypes";
-
-// Define the leave type enum for color mapping
-type LeaveType = 'annual' | 'sick' | 'personal' | 'unpaid' | 'other';
+import { GET_LEAVE_BALANCES } from "@/lib/leave/leaveQueries";
+import { LeaveType } from "@/lib/leave/types";
+import { LeaveBalanceResponse } from "@/lib/leave/graphqlTypes";
 
 // Leave type color mapping
 const leaveTypeColors: Record<LeaveType, { bg: string; text: string; border: string }> = {
@@ -55,15 +53,7 @@ export default function LeaveBalanceCard() {
   }
 
   // Fetch leave balances for the current user
-  const { loading, error, data } = useQuery<LeaveBalancesResponse>(GET_LEAVE_BALANCES, {
-    variables: { 
-      userId: user.id,
-      year: currentYear
-    },
-    fetchPolicy: "cache-and-network"
-  });
-
-    const { loading: loadingTypes, error: errorTypes, data: dataTypes } = useQuery<LeaveTypesResponse>(GET_LEAVE_TYPES, {
+  const { loading, error, data } = useQuery<LeaveBalanceResponse>(GET_LEAVE_BALANCES, {
     variables: { 
       userId: user.id,
       year: currentYear
@@ -91,9 +81,9 @@ export default function LeaveBalanceCard() {
     );
   }
 
-  const leaveBalances = data?.leaveBalances;
+  const leaveBalance = data?.leaveBalances;
   
-  if (!leaveBalances) {
+  if (!leaveBalance) {
     return (
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-lg font-medium text-gray-900 mb-4">Leave Balance</h2>
@@ -103,33 +93,34 @@ export default function LeaveBalanceCard() {
   }
 
   // Get all leave types with balances
-  const leaveTypes = dataTypes?.leaveTypes;
+  const leaveTypes = Object.keys(leaveBalance.balances) as LeaveType[];
 
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden">
       <div className="px-4 py-5 sm:px-6">
         <h2 className="text-lg font-medium text-gray-900">Leave Balance</h2>
         <p className="mt-1 max-w-2xl text-sm text-gray-500">
-          Your current leave entitlements for {currentYear}
+          Your current leave entitlements for {leaveBalance.year}
         </p>
       </div>
       
       <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {leaveBalances.map((balance) => {
-            // Convert the leaveType.name to our LeaveType enum
-            const leaveType = balance.leaveType.name.toLowerCase() as LeaveType;
-            const colors = leaveTypeColors[leaveType] || leaveTypeColors.other; // Fallback to 'other' if not found
-            const percentage = Math.round((balance.used / balance.allocated) * 100);
+          {leaveTypes.map((type) => {
+            const balance = leaveBalance.balances[type];
+            if (!balance) return null;
+            
+            const colors = leaveTypeColors[type];
+            const percentage = Math.round((balance.used / balance.entitled) * 100);
             
             return (
               <div
-                key={balance.id}
+                key={type}
                 className={`border ${colors.border} rounded-lg overflow-hidden`}
               >
                 <div className={`${colors.bg} px-4 py-2`}>
                   <h3 className={`text-sm font-medium ${colors.text}`}>
-                    {leaveTypeNames[leaveType]}
+                    {leaveTypeNames[type]}
                   </h3>
                 </div>
                 
@@ -137,7 +128,7 @@ export default function LeaveBalanceCard() {
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-500">Used</span>
                     <span className="text-sm font-medium text-gray-900">
-                      {balance.used} / {balance.allocated} days
+                      {balance.used} / {balance.entitled} days
                     </span>
                   </div>
                   

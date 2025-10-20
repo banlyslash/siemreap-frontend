@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@apollo/client";
+import { useQuery } from "@apollo/client/react";
 import { LeaveRequest, LeaveStatus, LeaveType } from "@/lib/leave/types";
-import { GET_EMPLOYEE_LEAVE_REQUESTS } from "@/lib/leave/leaveQueries";
+import { GET_LEAVE_REQUESTS } from "@/lib/leave/leaveQueries";
+import { LeaveRequestsResponse } from "@/lib/leave/graphqlTypes";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 // Status badge component
@@ -116,7 +117,7 @@ export default function LeaveHistoryTable() {
   }
 
   // Fetch leave requests for the current user
-  const { loading, error, data } = useQuery(GET_EMPLOYEE_LEAVE_REQUESTS, {
+  const { loading, error, data } = useQuery<LeaveRequestsResponse>(GET_LEAVE_REQUESTS, {
     variables: { employeeId: user.id },
     fetchPolicy: "cache-and-network"
   });
@@ -147,7 +148,7 @@ export default function LeaveHistoryTable() {
 
   // Sort leave requests by date (newest first)
   const sortedRequests = [...filteredRequests].sort(
-    (a: LeaveRequest, b: LeaveRequest) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
   return (
@@ -243,7 +244,7 @@ export default function LeaveHistoryTable() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <LeaveTypeBadge type={request.leaveType} />
+                      <LeaveTypeBadge type={request.leaveType.name} />
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                       {request.reason}

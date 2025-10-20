@@ -1,60 +1,61 @@
 import { User } from "../auth/types";
 
-export type LeaveStatus = 'pending' | 'approved_by_manager' | 'approved' | 'rejected' | 'cancelled';
-export type LeaveType = 'annual' | 'sick' | 'personal' | 'unpaid' | 'other';
+// Enums
+export enum LeaveRequestStatus {
+  PENDING = "pending",
+  MANAGER_APPROVED = "manager_approved",
+  MANAGER_REJECTED = "manager_rejected", 
+  HR_APPROVED = "hr_approved",
+  HR_REJECTED = "hr_rejected",
+  CANCELLED = "cancelled"
+}
+
+export enum UserRole {
+  HR = "hr",
+  MANAGER = "manager",
+  EMPLOYEE = "employee"
+}
+
+// Core types
+export interface LeaveType {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface LeaveRequest {
   id: string;
-  employeeId: string;
+  user: User;
+  leaveType: LeaveType;
   startDate: string; // ISO date string
   endDate: string; // ISO date string
-  halfDayStart?: boolean;
-  halfDayEnd?: boolean;
-  leaveType: LeaveType;
-  reason: string;
-  status: LeaveStatus;
-  managerApproval?: {
-    approverId: string;
-    timestamp: string; // ISO date string
-    comments?: string;
-  };
-  hrApproval?: {
-    approverId: string;
-    timestamp: string; // ISO date string
-    comments?: string;
-  };
-  attachmentUrl?: string;
+  halfDay: boolean;
+  reason?: string;
+  status: LeaveRequestStatus;
+  manager?: User;
+  managerComment?: string;
+  managerActionAt?: string;
+  hr?: User;
+  hrComment?: string;
+  hrActionAt?: string;
   createdAt: string; // ISO date string
   updatedAt: string; // ISO date string
 }
 
 export interface LeaveBalance {
-  userId: string;
-  year: number;
-  balances: {
-    [key in LeaveType]?: {
-      entitled: number;
-      used: number;
-      pending: number;
-      remaining: number;
-    };
-  };
-}
-
-export interface LeaveRequestFormData {
-  startDate: Date;
-  endDate: Date;
-  halfDayStart: boolean;
-  halfDayEnd: boolean;
+  id: string;
+  user: User;
   leaveType: LeaveType;
-  reason: string;
-  attachment?: File;
-}
-
-export interface LeaveApprovalData {
-  requestId: string;
-  approved: boolean;
-  comments?: string;
+  year: number;
+  allocated: number;
+  used: number;
+  remaining: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Holiday {
@@ -62,5 +63,62 @@ export interface Holiday {
   name: string;
   date: string; // ISO date string
   description?: string;
-  isRecurringYearly?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Input types
+export interface CreateLeaveRequestInput {
+  userId: string;
+  leaveTypeId: string;
+  startDate: string; // ISO date string
+  endDate: string; // ISO date string
+  halfDay?: boolean;
+  reason?: string;
+}
+
+export interface UpdateLeaveRequestInput {
+  leaveTypeId?: string;
+  startDate?: string;
+  endDate?: string;
+  halfDay?: boolean;
+  reason?: string;
+  status?: LeaveRequestStatus;
+  managerId?: string;
+  managerComment?: string;
+  managerActionAt?: string;
+  hrId?: string;
+  hrComment?: string;
+  hrActionAt?: string;
+}
+
+export interface UpdateLeaveBalanceInput {
+  allocated?: number;
+  used?: number;
+}
+
+export interface CreateLeaveTypeInput {
+  name: string;
+  description?: string;
+  color?: string;
+  active?: boolean;
+}
+
+export interface UpdateLeaveTypeInput {
+  name?: string;
+  description?: string;
+  color?: string;
+  active?: boolean;
+}
+
+export interface CreateHolidayInput {
+  name: string;
+  date: string;
+  description?: string;
+}
+
+export interface UpdateHolidayInput {
+  name?: string;
+  date?: string;
+  description?: string;
 }

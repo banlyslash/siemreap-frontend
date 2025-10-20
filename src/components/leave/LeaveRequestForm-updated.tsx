@@ -7,7 +7,7 @@ import { useMutation, useQuery } from "@apollo/client/react";
 import { GET_LEAVE_TYPES, CREATE_LEAVE_REQUEST } from "@/lib/leave/leaveQueries";
 import { useAuth } from "@/lib/auth/AuthContext";
 import SubmitButton from "../auth/SubmitButton";
-import { CreateLeaveRequestInput } from "@/lib/leave/types";
+import { LeaveType, CreateLeaveRequestInput } from "@/lib/leave/types";
 
 export default function LeaveRequestForm() {
   const router = useRouter();
@@ -15,7 +15,7 @@ export default function LeaveRequestForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
-  const [leaveTypes, setLeaveTypes] = useState<Array<{id: string, name: string}>>([]);
+  const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
 
   // Fetch leave types
   const { data: leaveTypesData, loading: loadingLeaveTypes } = useQuery(GET_LEAVE_TYPES);
@@ -33,7 +33,13 @@ export default function LeaveRequestForm() {
     }
   }, [leaveTypesData]);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    startDate: string;
+    endDate: string;
+    halfDay: boolean;
+    leaveTypeId: string;
+    reason: string;
+  }>({
     startDate: "",
     endDate: "",
     halfDay: false,
@@ -129,7 +135,6 @@ export default function LeaveRequestForm() {
     setIsLoading(true);
 
     try {
-      // Create the input object according to the schema requirements
       const input: CreateLeaveRequestInput = {
         userId: user.id,
         leaveTypeId: formData.leaveTypeId,
@@ -144,7 +149,6 @@ export default function LeaveRequestForm() {
       });
     } catch (error) {
       // Error is handled by onError in the useMutation hook
-      console.error("Error submitting leave request:", error);
     } finally {
       setIsLoading(false);
     }

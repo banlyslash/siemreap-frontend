@@ -46,7 +46,7 @@ export default function FormField({
           id={id}
           type={type}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
           placeholder={placeholder}
           autoComplete={autoComplete}
           required={required}

@@ -2,19 +2,16 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import FormField from "./FormField";
-import PasswordInput from "./PasswordInput";
 import SubmitButton from "./SubmitButton";
 
 interface LoginFormProps {
   onSuccess?: () => void;
-  redirectTo?: string;
 }
 
-export default function LoginForm({ onSuccess, redirectTo = "/dashboard" }: LoginFormProps) {
-  const router = useRouter();
+export default function LoginForm({ onSuccess }: LoginFormProps) {
+  const { signIn, error: authError } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   
@@ -37,14 +34,16 @@ export default function LoginForm({ onSuccess, redirectTo = "/dashboard" }: Logi
     
     let isValid = true;
     
-    if (!formData.email) {
+    // Validate email
+    if (!formData.email.trim()) {
       newErrors.email = "Email is required";
       isValid = false;
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
+      newErrors.email = "Email is invalid";
       isValid = false;
     }
     
+    // Validate password
     if (!formData.password) {
       newErrors.password = "Password is required";
       isValid = false;
@@ -54,9 +53,6 @@ export default function LoginForm({ onSuccess, redirectTo = "/dashboard" }: Logi
     return isValid;
   };
   
-  // Import the useAuth hook
-  const { signIn, error: authError } = useAuth();
-
   // Set form error if auth error changes
   useEffect(() => {
     if (authError) {
@@ -76,10 +72,10 @@ export default function LoginForm({ onSuccess, redirectTo = "/dashboard" }: Logi
     
     try {
       // Use the signIn method from AuthContext
+      // Note: We're omitting rememberMe as it's not in the AuthContext interface
       await signIn({
         email: formData.email,
-        password: formData.password,
-        rememberMe: formData.rememberMe
+        password: formData.password
       });
       
       // If we get here, login was successful
@@ -103,7 +99,7 @@ export default function LoginForm({ onSuccess, redirectTo = "/dashboard" }: Logi
     });
     
     // Clear error when typing
-    if (errors[field as keyof typeof errors]) {
+    if (field === "email" || field === "password") {
       setErrors({
         ...errors,
         [field]: "",
@@ -111,8 +107,15 @@ export default function LoginForm({ onSuccess, redirectTo = "/dashboard" }: Logi
     }
   };
   
+  const handleCheckboxChange = (field: string, checked: boolean) => {
+    setFormData({
+      ...formData,
+      [field]: checked,
+    });
+  };
+  
   return (
-    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+    <form onSubmit={handleSubmit} className="space-y-6">
       {formError && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
           <span className="block sm:inline">{formError}</span>
@@ -121,25 +124,22 @@ export default function LoginForm({ onSuccess, redirectTo = "/dashboard" }: Logi
       
       <FormField
         id="email"
-        label="Email address"
+        label="Email"
         type="email"
         value={formData.email}
-        onChange={(value) => handleInputChange("email", value)}
+        onChange={(value: string) => handleInputChange("email", value)}
         error={errors.email}
         required
-        autoComplete="email"
-        placeholder="you@example.com"
       />
       
-      <PasswordInput
+      <FormField
         id="password"
         label="Password"
+        type="password"
         value={formData.password}
-        onChange={(value) => handleInputChange("password", value)}
+        onChange={(value: string) => handleInputChange("password", value)}
         error={errors.password}
         required
-        autoComplete="current-password"
-        placeholder="••••••••"
       />
       
       <div className="flex items-center justify-between">
@@ -149,14 +149,14 @@ export default function LoginForm({ onSuccess, redirectTo = "/dashboard" }: Logi
             name="remember-me"
             type="checkbox"
             checked={formData.rememberMe}
-            onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
+            onChange={(e) => handleCheckboxChange("rememberMe", e.target.checked)}
             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
           />
-          <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+          <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
             Remember me
           </label>
         </div>
-        
+
         <div className="text-sm">
           <Link href="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
             Forgot your password?
@@ -165,16 +165,7 @@ export default function LoginForm({ onSuccess, redirectTo = "/dashboard" }: Logi
       </div>
       
       <div>
-        <SubmitButton isLoading={isLoading}>
-          Sign in
-        </SubmitButton>
-      </div>
-      
-      <div className="text-center text-sm">
-        Don't have an account?{" "}
-        <Link href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
-          Sign up
-        </Link>
+        <SubmitButton isLoading={isLoading}>Sign in</SubmitButton>
       </div>
     </form>
   );

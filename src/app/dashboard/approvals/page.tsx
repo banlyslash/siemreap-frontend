@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
-import LeaveApprovalTable from "@/components/leave/LeaveApprovalTable";
+import LeaveApprovalTableWithAPI from "@/components/leave/LeaveApprovalTableWithAPI";
 
 export default function ApprovalsPage() {
   const { user, loading } = useAuth();
@@ -42,7 +42,7 @@ export default function ApprovalsPage() {
           </p>
         </div>
 
-        <LeaveApprovalTable />
+        <LeaveApprovalTableWithAPI />
       </div>
     </div>
   );

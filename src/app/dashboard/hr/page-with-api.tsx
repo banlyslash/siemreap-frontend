@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { GET_PENDING_APPROVALS, APPROVE_LEAVE_REQUEST } from "@/lib/leave/leaveQueries";
+import { GET_PENDING_APPROVALS, PROCESS_APPROVAL } from "@/lib/leave/leaveQueries";
 import { AlertCircle, Calendar, CheckCircle, Clock, PieChart, Users, CalendarDays, Building } from "lucide-react";
-import { PendingApprovalsResponse, ApprovalResponse } from "@/lib/leave/graphqlTypes";
+import { PendingApprovalsResponse, ProcessApprovalResponse } from "@/lib/leave/graphqlTypes";
 
 export default function HRDashboardPage() {
   const { user, loading } = useAuth();
@@ -31,7 +31,7 @@ export default function HRDashboardPage() {
   });
 
   // Process HR approval mutation
-  const [processApproval, { loading: processingApproval }] = useMutation<ApprovalResponse>(APPROVE_LEAVE_REQUEST, {
+  const [processApproval, { loading: processingApproval }] = useMutation<ProcessApprovalResponse>(PROCESS_APPROVAL, {
     onCompleted: () => {
       refetch();
     }
@@ -242,7 +242,7 @@ export default function HRDashboardPage() {
                 </div>
               ) : (
                 <ul className="divide-y divide-gray-200">
-                  {pendingApprovals.slice(0, 3).map((request: any) => {
+                  {pendingApprovals.slice(0, 3).map((request) => {
                     // Format dates
                     const startDate = new Date(request.startDate).toLocaleDateString();
                     const endDate = new Date(request.endDate).toLocaleDateString();
@@ -258,10 +258,10 @@ export default function HRDashboardPage() {
                             </div>
                             <div className="ml-4">
                               <p className="text-sm font-medium text-gray-900">
-                                {request.employee.firstName} {request.employee.lastName}
+                                {request.user.firstName} {request.user.lastName}
                               </p>
                               <p className="text-sm text-gray-500">
-                                {request.leaveType.charAt(0).toUpperCase() + request.leaveType.slice(1)} Leave: {startDate} - {endDate}
+                                {request.leaveType.name.charAt(0).toUpperCase() + request.leaveType.name.slice(1)} Leave: {startDate} - {endDate}
                               </p>
                             </div>
                           </div>
