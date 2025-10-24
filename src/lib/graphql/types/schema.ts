@@ -138,6 +138,12 @@ export interface UpdateLeaveBalanceInput {
   taken?: Maybe<number>;
 }
 
+export interface InitializeLeaveBalanceInput {
+  userId: string;
+  defaultAllocation: number;
+  year?: Maybe<number>; // Optional, defaults to current year
+}
+
 export interface CreateHolidayInput {
   name: string;
   date: string;

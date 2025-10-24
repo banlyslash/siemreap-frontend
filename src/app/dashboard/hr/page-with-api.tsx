@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { GET_PENDING_APPROVALS, PROCESS_APPROVAL } from "@/lib/leave/leaveQueries";
+import { GET_PENDING_APPROVALS, APPROVE_LEAVE_REQUEST, REJECT_LEAVE_REQUEST } from "@/lib/leave/leaveQueries";
 import { AlertCircle, Calendar, CheckCircle, Clock, PieChart, Users, CalendarDays, Building } from "lucide-react";
-import { PendingApprovalsResponse, ProcessApprovalResponse } from "@/lib/leave/graphqlTypes";
+import { PendingApprovalsResponse, ApproveLeaveRequestResponse, RejectLeaveRequestResponse } from "@/lib/leave/graphqlTypes";
 
 export default function HRDashboardPage() {
   const { user, loading } = useAuth();
@@ -31,7 +31,7 @@ export default function HRDashboardPage() {
   });
 
   // Process HR approval mutation
-  const [processApproval, { loading: processingApproval }] = useMutation<ProcessApprovalResponse>(PROCESS_APPROVAL, {
+  const [processApproval, { loading: processingApproval }] = useMutation<ApproveLeaveRequestResponse>(APPROVE_LEAVE_REQUEST, {
     onCompleted: () => {
       refetch();
     }
@@ -44,12 +44,8 @@ export default function HRDashboardPage() {
     try {
       await processApproval({
         variables: {
-          input: {
-            requestId,
-            approverId: user.id,
-            approved,
-            comments
-          }
+          id: requestId,
+          comment: comments
         }
       });
     } catch (error) {

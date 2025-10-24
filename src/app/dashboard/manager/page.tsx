@@ -7,7 +7,13 @@ import { useQuery, useMutation } from "@apollo/client/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { GET_PENDING_APPROVALS, GET_TEAM_MEMBERS, GET_TEAM_ON_LEAVE_TODAY } from "@/lib/leave/leaveQueries";
 import { APPROVE_LEAVE_REQUEST, REJECT_LEAVE_REQUEST } from "@/lib/leave/leaveQueries";
-import { PendingApprovalsResponse } from "@/lib/leave/graphqlTypes";
+import { 
+  PendingApprovalsResponse, 
+  TeamMembersResponse, 
+  TeamOnLeaveTodayResponse,
+  ApproveLeaveRequestResponse,
+  RejectLeaveRequestResponse
+} from "@/lib/leave/graphqlTypes";
 import { AlertCircle, CheckCircle, Clock, Users, XCircle } from "lucide-react";
 
 export default function ManagerDashboardPage() {
@@ -38,15 +44,28 @@ export default function ManagerDashboardPage() {
   }
 
   // Get pending approvals
-  const { loading: loadingApprovals, error: errorApprovals, data: dataApprovals, refetch } = useQuery(GET_PENDING_APPROVALS);
+  const { 
+    loading: loadingApprovals, 
+    error: errorApprovals, 
+    data: dataApprovals, 
+    refetch 
+  } = useQuery<PendingApprovalsResponse>(GET_PENDING_APPROVALS);
   
   // Get team members
-  const { loading: loadingTeam, error: errorTeam, data: dataTeam } = useQuery(GET_TEAM_MEMBERS, {
+  const { 
+    loading: loadingTeam, 
+    error: errorTeam, 
+    data: dataTeam 
+  } = useQuery<TeamMembersResponse>(GET_TEAM_MEMBERS, {
     variables: { managerId: user.id }
   });
   
   // Get team members on leave today
-  const { loading: loadingOnLeave, error: errorOnLeave, data: dataOnLeave } = useQuery(GET_TEAM_ON_LEAVE_TODAY, {
+  const { 
+    loading: loadingOnLeave, 
+    error: errorOnLeave, 
+    data: dataOnLeave 
+  } = useQuery<TeamOnLeaveTodayResponse>(GET_TEAM_ON_LEAVE_TODAY, {
     variables: { managerId: user.id }
   });
   
@@ -57,7 +76,7 @@ export default function ManagerDashboardPage() {
   const [isApproving, setIsApproving] = useState(false);
   
   // Mutations for approval/rejection
-  const [approveLeaveRequest] = useMutation(APPROVE_LEAVE_REQUEST, {
+  const [approveLeaveRequest] = useMutation<ApproveLeaveRequestResponse>(APPROVE_LEAVE_REQUEST, {
     onCompleted: () => {
       refetch();
       setIsModalOpen(false);
@@ -65,7 +84,7 @@ export default function ManagerDashboardPage() {
     }
   });
 
-  const [rejectLeaveRequest] = useMutation(REJECT_LEAVE_REQUEST, {
+  const [rejectLeaveRequest] = useMutation<RejectLeaveRequestResponse>(REJECT_LEAVE_REQUEST, {
     onCompleted: () => {
       refetch();
       setIsModalOpen(false);
@@ -113,7 +132,7 @@ export default function ManagerDashboardPage() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Manager Dashboard</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Welcome back, {user.name}
+            Welcome back, {user.firstName}
           </p>
         </div>
 
@@ -133,7 +152,7 @@ export default function ManagerDashboardPage() {
                     </dt>
                     <dd>
                       <div className="text-lg font-medium text-gray-900">
-                        {pendingApprovals.length}
+                        {loadingApprovals ? "..." : errorApprovals ? "Error" : pendingApprovals.length}
                       </div>
                     </dd>
                   </dl>
@@ -166,7 +185,7 @@ export default function ManagerDashboardPage() {
                     </dt>
                     <dd>
                       <div className="text-lg font-medium text-gray-900">
-                        {loadingTeam ? "..." : teamMembers.length}
+                        {loadingTeam ? "..." : errorTeam ? "Error" : teamMembers.length}
                       </div>
                     </dd>
                   </dl>
@@ -199,7 +218,7 @@ export default function ManagerDashboardPage() {
                     </dt>
                     <dd>
                       <div className="text-lg font-medium text-gray-900">
-                        {loadingOnLeave ? "..." : onLeaveToday.length}
+                        {loadingOnLeave ? "..." : errorOnLeave ? "Error" : onLeaveToday.length}
                       </div>
                     </dd>
                   </dl>
@@ -227,19 +246,13 @@ export default function ManagerDashboardPage() {
             </h2>
             <Link
               href="/dashboard/approvals"
-              className="text-sm font-medium text-blue-600 hover:text-blue-500"
+              className="font-medium text-blue-700 hover:text-blue-900"
             >
-              View all
+              View all approvals
             </Link>
-          </div>
-          <div className="border-t border-gray-200">
-            {pendingApprovals.length === 0 ? (
-              <div className="p-6 text-center text-gray-500">
-                No pending approvals.
-              </div>
             ) : (
               <ul className="divide-y divide-gray-200">
-                {pendingApprovals.slice(0, 5).map((request: any) => {
+                {pendingApprovals.slice(0, 5).map((request) => {
                   // Format dates
                   const startDate = new Date(request.startDate).toLocaleDateString();
                   const endDate = new Date(request.endDate).toLocaleDateString();
@@ -286,7 +299,7 @@ export default function ManagerDashboardPage() {
                   );
                 })}
               </ul>
-            )}
+            )
           </div>
         </div>
       </div>

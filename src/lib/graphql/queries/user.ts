@@ -1,4 +1,5 @@
 import { gql } from '@apollo/client';
+import { User } from '../types/schema';
 
 export const ME_QUERY = gql`
   query Me {
@@ -51,8 +52,8 @@ export const GET_USER_QUERY = gql`
           name
         }
         year
-        entitled
-        taken
+        allocated
+        used
         remaining
       }
     }

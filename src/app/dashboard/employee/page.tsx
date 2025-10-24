@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthContext";
-import LeaveBalanceCard from "@/components/leave/LeaveBalanceCard";
-import { getEmployeeLeaveRequests } from "@/lib/leave/mockLeaveData";
+import LeaveBalanceCardWithAPI from "@/components/leave/LeaveBalanceCardWithAPI";
+import { useQuery } from "@apollo/client/react";
+import { GET_LEAVE_REQUESTS } from "@/lib/leave/leaveQueries";
 import { Calendar, CalendarDays, Clock, FileText, Plus } from "lucide-react";
+import { LeaveRequestStatus } from "@/lib/leave/types";
+import { GetLeaveRequestsResponse } from "@/lib/leave/graphqlTypes";
 
 export default function EmployeeDashboardPage() {
   const { user, loading } = useAuth();
@@ -35,11 +38,22 @@ export default function EmployeeDashboardPage() {
     return null; // Will redirect in useEffect
   }
 
-  // Get recent leave requests
-  const leaveRequests = getEmployeeLeaveRequests(user.id);
-  const recentRequests = [...leaveRequests]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 3);
+  const {
+    data: leaveRequestsData,
+    loading: loadingRequests,
+    error: errorRequests,
+  } = useQuery<GetLeaveRequestsResponse>(GET_LEAVE_REQUESTS, {
+    variables: { userId: user.id },
+    skip: !user,
+    fetchPolicy: "cache-and-network",
+  });
+
+  const recentRequests = useMemo(() => {
+    const requests = leaveRequestsData?.leaveRequests ?? [];
+    return [...requests]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 3);
+  }, [leaveRequestsData]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -47,7 +61,7 @@ export default function EmployeeDashboardPage() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Employee Dashboard</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Welcome back, {user.name}
+            Welcome back, {user.firstName + " " + user.lastName}
           </p>
         </div>
 
@@ -140,26 +154,37 @@ export default function EmployeeDashboardPage() {
                 </Link>
               </div>
               <div className="border-t border-gray-200">
-                {recentRequests.length === 0 ? (
+                {loadingRequests ? (
+                  <div className="p-6 flex justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  </div>
+                ) : errorRequests ? (
+                  <div className="p-6 text-center text-red-500">
+                    Failed to load leave requests: {errorRequests.message}
+                  </div>
+                ) : recentRequests.length === 0 ? (
                   <div className="p-6 text-center text-gray-500">
                     No recent leave requests.
                   </div>
                 ) : (
                   <ul className="divide-y divide-gray-200">
                     {recentRequests.map((request) => {
-                      // Format dates
                       const startDate = new Date(request.startDate).toLocaleDateString();
                       const endDate = new Date(request.endDate).toLocaleDateString();
                       const createdDate = new Date(request.createdAt).toLocaleDateString();
+                      const statusValue = request.status as LeaveRequestStatus;
 
-                      // Status color
                       let statusColor = "text-yellow-600 bg-yellow-100";
-                      if (request.status === "approved") {
+                      if (
+                        statusValue === LeaveRequestStatus.MANAGER_APPROVED ||
+                        statusValue === LeaveRequestStatus.HR_APPROVED
+                      ) {
                         statusColor = "text-green-600 bg-green-100";
-                      } else if (request.status === "rejected") {
+                      } else if (
+                        statusValue === LeaveRequestStatus.MANAGER_REJECTED ||
+                        statusValue === LeaveRequestStatus.HR_REJECTED
+                      ) {
                         statusColor = "text-red-600 bg-red-100";
-                      } else if (request.status === "approved_by_manager") {
-                        statusColor = "text-blue-600 bg-blue-100";
                       }
 
                       return (
@@ -171,7 +196,7 @@ export default function EmployeeDashboardPage() {
                               </div>
                               <div className="ml-4">
                                 <p className="text-sm font-medium text-gray-900">
-                                  {request.leaveType.charAt(0).toUpperCase() + request.leaveType.slice(1)} Leave
+                                  {request.leaveType.name.charAt(0).toUpperCase() + request.leaveType.name.slice(1)} Leave
                                 </p>
                                 <p className="text-sm text-gray-500">
                                   {startDate} - {endDate}
@@ -182,7 +207,7 @@ export default function EmployeeDashboardPage() {
                               <span
                                 className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColor}`}
                               >
-                                {request.status.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                                {statusValue.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
                               </span>
                               <div className="ml-4 flex items-center text-sm text-gray-500">
                                 <Clock className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" />
@@ -202,7 +227,7 @@ export default function EmployeeDashboardPage() {
           {/* Right column */}
           <div className="space-y-8">
             {/* Leave balance */}
-            <LeaveBalanceCard />
+            <LeaveBalanceCardWithAPI />
           </div>
         </div>
       </div>

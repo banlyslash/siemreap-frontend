@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthContext";
-import EmployeesList from "@/components/leave/EmployeesList";
+import EmployeesListWithAPI from "@/components/leave/EmployeesListWithAPI";
 
 export default function EmployeesPage() {
   const { user, loading } = useAuth();
@@ -44,7 +44,7 @@ export default function EmployeesPage() {
         </div>
 
         <div className="space-y-8">
-          <EmployeesList />
+          <EmployeesListWithAPI />
           
           {/* Additional employee management sections can be added here */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
