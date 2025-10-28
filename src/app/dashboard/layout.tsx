@@ -17,7 +17,12 @@ import {
   X,
   CalendarDays,
   Building,
+  Bell,
+  Settings,
+  HelpCircle,
+  Search,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface NavItem {
   name: string;
@@ -65,7 +70,10 @@ export default function DashboardLayout({
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="relative">
+          <div className="h-16 w-16 rounded-full border-4 border-gray-200"></div>
+          <div className="absolute top-0 left-0 h-16 w-16 rounded-full border-4 border-t-[#0070f3] animate-spin"></div>
+        </div>
       </div>
     );
   }
@@ -89,7 +97,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Mobile sidebar overlay */}
       <div
         className={`fixed inset-0 bg-gray-600 bg-opacity-75 z-40 transition-opacity ${
@@ -100,59 +108,86 @@ export default function DashboardLayout({
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 w-64 bg-white z-50 transform transition-transform ${
+        className={`fixed inset-y-0 left-0 w-72 bg-white z-50 transform transition-transform shadow-lg ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0 lg:static lg:inset-auto lg:h-screen`}
       >
         <div className="h-full flex flex-col">
           {/* Sidebar header */}
-          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
+          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-100">
             <Link href={dashboardHome} className="flex items-center">
-              <span className="text-xl font-semibold text-gray-800">
-                Leave Management
+              <span className="text-xl font-bold text-[#0070f3]">
+                Siemreap
               </span>
             </Link>
             <button
-              className="lg:hidden"
+              className="lg:hidden text-gray-500 hover:text-gray-700 focus:outline-none"
               onClick={() => setSidebarOpen(false)}
             >
-              <X className="h-6 w-6 text-gray-500" />
+              <X className="h-6 w-6" />
             </button>
           </div>
 
           {/* Sidebar content */}
-          <div className="flex-1 overflow-y-auto">
-            <nav className="px-2 py-4 space-y-1">
-              {filteredNavigation.map((item) => {
-                const isActive = pathname === item.href || 
-                  (item.href !== "/dashboard" && pathname.startsWith(item.href));
-                
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
-                      isActive
-                        ? "bg-gray-100 text-gray-900"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                    }`}
-                  >
-                    <item.icon
-                      className={`mr-3 h-5 w-5 ${
+          <div className="flex-1 overflow-y-auto px-4 py-6">
+            <div className="mb-8">
+              <div className="px-2 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                Main Menu
+              </div>
+              <nav className="space-y-1">
+                {filteredNavigation.map((item) => {
+                  const isActive = pathname === item.href || 
+                    (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                  
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
                         isActive
-                          ? "text-gray-500"
-                          : "text-gray-400 group-hover:text-gray-500"
+                          ? "bg-blue-50 text-[#0070f3]"
+                          : "text-gray-700 hover:bg-gray-50 hover:text-[#0070f3]"
                       }`}
-                    />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
+                    >
+                      <item.icon
+                        className={`mr-3 h-5 w-5 ${
+                          isActive
+                            ? "text-[#0070f3]"
+                            : "text-gray-500 group-hover:text-[#0070f3]"
+                        }`}
+                      />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+            
+            <div className="mb-8">
+              <div className="px-2 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                Support
+              </div>
+              <nav className="space-y-1">
+                <Link
+                  href="#"
+                  className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50 hover:text-[#0070f3]"
+                >
+                  <HelpCircle className="mr-3 h-5 w-5 text-gray-500 group-hover:text-[#0070f3]" />
+                  Help Center
+                </Link>
+                <Link
+                  href="#"
+                  className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50 hover:text-[#0070f3]"
+                >
+                  <Settings className="mr-3 h-5 w-5 text-gray-500 group-hover:text-[#0070f3]" />
+                  Settings
+                </Link>
+              </nav>
+            </div>
           </div>
 
           {/* Sidebar footer */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 border-t border-gray-100">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 {user.avatarUrl ? (
@@ -162,23 +197,24 @@ export default function DashboardLayout({
                     alt={`${user.firstName} ${user.lastName}`}
                   />
                 ) : (
-                  <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                    <User className="h-6 w-6 text-gray-500" />
+                  <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <User className="h-5 w-5 text-[#0070f3]" />
                   </div>
                 )}
               </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-700">{user.firstName} {user.lastName}</p>
-                <p className="text-xs text-gray-500 capitalize">{user.role.toLowerCase()}</p>
+              <div className="ml-3 flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{user.firstName} {user.lastName}</p>
+                <p className="text-xs text-gray-500 capitalize truncate">{user.role.toLowerCase()}</p>
               </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-2"
+                onClick={() => signOut()}
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
-            <button
-              onClick={() => signOut()}
-              className="mt-4 w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign out
-            </button>
           </div>
         </div>
       </div>
@@ -186,25 +222,77 @@ export default function DashboardLayout({
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Top header */}
-        <header className="bg-white shadow-sm lg:hidden">
-          <div className="flex items-center justify-between h-16 px-4">
-            <button
-              className="text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="h-6 w-6" />
-            </button>
-            <Link href={dashboardHome} className="flex items-center">
-              <span className="text-xl font-semibold text-gray-800">
-                Leave Management
-              </span>
-            </Link>
-            <div className="w-6"></div> {/* Empty div for flex spacing */}
+        <header className="bg-white shadow-sm sticky top-0 z-10">
+          <div className="flex items-center justify-between h-16 px-4 lg:px-8">
+            <div className="flex items-center lg:hidden">
+              <button
+                className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-6 w-6" />
+              </button>
+              <Link href={dashboardHome} className="ml-4 flex items-center">
+                <span className="text-lg font-bold text-[#0070f3]">
+                  Siemreap
+                </span>
+              </Link>
+            </div>
+            
+            <div className="hidden lg:flex items-center flex-1 px-2 lg:ml-6 lg:justify-end">
+              <div className="max-w-lg w-full">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[#0070f3] focus:border-[#0070f3] sm:text-sm"
+                    placeholder="Search..."
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center">
+              <button className="p-1 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none">
+                <Bell className="h-6 w-6" />
+              </button>
+              <div className="ml-4 relative flex-shrink-0 lg:hidden">
+                {user.avatarUrl ? (
+                  <img
+                    className="h-8 w-8 rounded-full"
+                    src={user.avatarUrl}
+                    alt={`${user.firstName} ${user.lastName}`}
+                  />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
+                    <User className="h-4 w-4 text-[#0070f3]" />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 py-6 px-4 sm:px-6 lg:px-8">{children}</main>
+        
+        {/* Footer */}
+        <footer className="bg-white border-t border-gray-200 py-4 px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-gray-500">
+              &copy; {new Date().getFullYear()} Siemreap. All rights reserved.
+            </p>
+            <div className="flex space-x-4">
+              <Link href="#" className="text-sm text-gray-500 hover:text-gray-700">
+                Privacy Policy
+              </Link>
+              <Link href="#" className="text-sm text-gray-500 hover:text-gray-700">
+                Terms of Service
+              </Link>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );

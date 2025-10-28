@@ -8,9 +8,10 @@ import SubmitButton from "./SubmitButton";
 
 interface LoginFormProps {
   onSuccess?: () => void;
+  redirectTo?: string;
 }
 
-export default function LoginForm({ onSuccess }: LoginFormProps) {
+export default function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
   const { signIn, error: authError } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);

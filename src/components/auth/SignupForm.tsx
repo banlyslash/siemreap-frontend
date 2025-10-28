@@ -81,7 +81,19 @@ export default function SignupForm({ onSuccess, redirectTo = "/dashboard" }: Sig
   };
   
   // Import the useAuth hook
-  const { signUp, error: authError } = useAuth();
+  const { error: authError } = useAuth();
+  
+  // Mock signUp function since it's not implemented in AuthContext yet
+  const signUp = async (data: any) => {
+    // This is a placeholder - in a real app, this would call the API
+    console.log('Signup data:', data);
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    // For demo purposes, we'll just redirect
+    if (redirectTo) {
+      router.push(redirectTo);
+    }
+  };
 
   // Set form error if auth error changes
   useEffect(() => {
