@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAuth } from "@/lib/auth/AuthContext";
+import { useAuthStore, getDashboardPath } from "@/store/authStore";
 import FormField from "./FormField";
 import SubmitButton from "./SubmitButton";
 
@@ -12,8 +13,8 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
-  const { signIn, error: authError } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const { signIn, error: authError, loading } = useAuthStore();
   const [formError, setFormError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
@@ -69,27 +70,24 @@ export default function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
       return;
     }
     
-    setIsLoading(true);
-    
     try {
-      // Use the signIn method from AuthContext
-      // Note: We're omitting rememberMe as it's not in the AuthContext interface
+      // Use the signIn method from authStore
       await signIn({
         email: formData.email,
         password: formData.password
       });
       
       // If we get here, login was successful
-      // The redirect is handled by AuthContext based on user role
       if (onSuccess) {
         onSuccess();
+      } else {
+        // Navigate to the appropriate dashboard based on user role
+        const dashboardPath = getDashboardPath();
+        router.push(redirectTo || dashboardPath);
       }
-      // No need for explicit redirect as AuthContext handles it
     } catch (error: any) {
-      // Error is already set by AuthContext
+      // Error is already set by authStore
       console.error("Login error:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
   
@@ -166,7 +164,7 @@ export default function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
       </div>
       
       <div>
-        <SubmitButton isLoading={isLoading}>Sign in</SubmitButton>
+        <SubmitButton isLoading={loading}>Sign in</SubmitButton>
       </div>
     </form>
   );
