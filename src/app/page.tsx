@@ -2,12 +2,12 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowRight, Calendar, ClipboardList, FileText, CheckCircle, Users, Clock } from "lucide-react";
+import { Calendar, ClipboardList, FileText, CheckCircle, Users, Clock } from "lucide-react";
 import LoginForm from "../components/auth/LoginForm";
 import SignupForm from "../components/auth/SignupForm";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 
 export default function Home() {
   const [activeTab, setActiveTab] = React.useState<'login' | 'signup'>('login');
@@ -119,9 +119,9 @@ export default function Home() {
 
           <div className="mt-16">
             <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-              <Card className="overflow-hidden">
+              <Card className="overflow-hidden transition-all hover:shadow-lg">
                 <div className="h-2 bg-[#0070f3]"></div>
-                <CardHeader>
+                <CardHeader className="pb-4">
                   <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
                     <ClipboardList className="h-6 w-6 text-blue-600" />
                   </div>
@@ -130,21 +130,16 @@ export default function Home() {
                     Easily submit leave requests with date selection, reason, and type.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   <p className="text-gray-600">
                     Get instant validation against your available balance. Track the status of your requests in real-time.
                   </p>
                 </CardContent>
-                <CardFooter>
-                  <Button variant="link" className="p-0">
-                    Learn more <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </CardFooter>
               </Card>
 
-              <Card className="overflow-hidden">
+              <Card className="overflow-hidden transition-all hover:shadow-lg">
                 <div className="h-2 bg-[#10b981]"></div>
-                <CardHeader>
+                <CardHeader className="pb-4">
                   <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-green-100">
                     <FileText className="h-6 w-6 text-green-600" />
                   </div>
@@ -153,21 +148,16 @@ export default function Home() {
                     Streamlined approval process with manager and HR review.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   <p className="text-gray-600">
                     Get notified at each step of the approval chain. Managers can easily approve or reject requests.
                   </p>
                 </CardContent>
-                <CardFooter>
-                  <Button variant="link" className="p-0">
-                    Learn more <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </CardFooter>
               </Card>
 
-              <Card className="overflow-hidden">
+              <Card className="overflow-hidden transition-all hover:shadow-lg">
                 <div className="h-2 bg-[#6366f1]"></div>
-                <CardHeader>
+                <CardHeader className="pb-4">
                   <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-indigo-100">
                     <Calendar className="h-6 w-6 text-indigo-600" />
                   </div>
@@ -176,16 +166,11 @@ export default function Home() {
                     Visual calendar showing team availability.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   <p className="text-gray-600">
                     Plan your leaves with full visibility of your team's schedule. Avoid conflicts and ensure coverage.
                   </p>
                 </CardContent>
-                <CardFooter>
-                  <Button variant="link" className="p-0">
-                    Learn more <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </CardFooter>
               </Card>
             </div>
           </div>

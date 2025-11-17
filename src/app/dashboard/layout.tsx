@@ -17,10 +17,6 @@ import {
   X,
   CalendarDays,
   Building,
-  Bell,
-  Settings,
-  HelpCircle,
-  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -110,7 +106,7 @@ export default function DashboardLayout({
       <div
         className={`fixed inset-y-0 left-0 w-72 bg-white z-50 transform transition-transform shadow-lg ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0 lg:static lg:inset-auto lg:h-screen`}
+        } lg:translate-x-0 lg:sticky lg:top-0 lg:h-screen`}
       >
         <div className="h-full flex flex-col">
           {/* Sidebar header */}
@@ -136,7 +132,14 @@ export default function DashboardLayout({
               </div>
               <nav className="space-y-1">
                 {filteredNavigation.map((item) => {
+                  // Special handling for Dashboard item - highlight when on role-specific dashboard pages
+                  const isDashboardItem = item.href === "/dashboard";
+                  const isOnDashboardHome = pathname === "/dashboard/employee" || 
+                                           pathname === "/dashboard/manager" || 
+                                           pathname === "/dashboard/hr";
+                  
                   const isActive = pathname === item.href || 
+                    (isDashboardItem && isOnDashboardHome) ||
                     (item.href !== "/dashboard" && pathname.startsWith(item.href));
                   
                   return (
@@ -160,28 +163,6 @@ export default function DashboardLayout({
                     </Link>
                   );
                 })}
-              </nav>
-            </div>
-            
-            <div className="mb-8">
-              <div className="px-2 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Support
-              </div>
-              <nav className="space-y-1">
-                <Link
-                  href="#"
-                  className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50 hover:text-[#0070f3]"
-                >
-                  <HelpCircle className="mr-3 h-5 w-5 text-gray-500 group-hover:text-[#0070f3]" />
-                  Help Center
-                </Link>
-                <Link
-                  href="#"
-                  className="group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50 hover:text-[#0070f3]"
-                >
-                  <Settings className="mr-3 h-5 w-5 text-gray-500 group-hover:text-[#0070f3]" />
-                  Settings
-                </Link>
               </nav>
             </div>
           </div>
@@ -238,25 +219,7 @@ export default function DashboardLayout({
               </Link>
             </div>
             
-            <div className="hidden lg:flex items-center flex-1 px-2 lg:ml-6 lg:justify-end">
-              <div className="max-w-lg w-full">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="text"
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[#0070f3] focus:border-[#0070f3] sm:text-sm"
-                    placeholder="Search..."
-                  />
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center">
-              <button className="p-1 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none">
-                <Bell className="h-6 w-6" />
-              </button>
+            <div className="flex items-center ml-auto">
               <div className="ml-4 relative flex-shrink-0 lg:hidden">
                 {user.avatarUrl ? (
                   <img
@@ -279,18 +242,10 @@ export default function DashboardLayout({
         
         {/* Footer */}
         <footer className="bg-white border-t border-gray-200 py-4 px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
+          <div className="text-center">
             <p className="text-sm text-gray-500">
               &copy; {new Date().getFullYear()} Siemreap. All rights reserved.
             </p>
-            <div className="flex space-x-4">
-              <Link href="#" className="text-sm text-gray-500 hover:text-gray-700">
-                Privacy Policy
-              </Link>
-              <Link href="#" className="text-sm text-gray-500 hover:text-gray-700">
-                Terms of Service
-              </Link>
-            </div>
           </div>
         </footer>
       </div>

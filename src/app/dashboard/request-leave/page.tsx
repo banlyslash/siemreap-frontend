@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
 import LeaveRequestFormWithAPI from "@/components/leave/LeaveRequestFormWithAPI";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function RequestLeavePage() {
   const { user, loading } = useAuth();
@@ -31,19 +32,17 @@ export default function RequestLeavePage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <div className="px-4 py-5 sm:px-6">
-            <h1 className="text-lg leading-6 font-medium text-gray-900">
-              Request Leave
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+        <Card>
+          <CardHeader>
+            <CardTitle>Request Leave</CardTitle>
+            <CardDescription>
               Fill out the form below to submit a leave request.
-            </p>
-          </div>
-          <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <LeaveRequestFormWithAPI />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

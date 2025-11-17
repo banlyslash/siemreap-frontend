@@ -3,24 +3,25 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@apollo/client/react";
-import { LeaveRequest, LeaveStatus, LeaveType } from "@/lib/leave/types";
+import { LeaveRequest, LeaveRequestStatus, LeaveType } from "@/lib/leave/types";
 import { GET_LEAVE_REQUESTS } from "@/lib/leave/leaveQueries";
 import { LeaveRequestsResponse } from "@/lib/leave/graphqlTypes";
 import { useAuth } from "@/lib/auth/AuthContext";
 
 // Status badge component
-const StatusBadge = ({ status }: { status: LeaveStatus }) => {
+const StatusBadge = ({ status }: { status: string }) => {
   const getStatusColor = () => {
     switch (status) {
-      case "pending":
+      case LeaveRequestStatus.PENDING:
         return "bg-yellow-100 text-yellow-800";
-      case "approved_by_manager":
+      case LeaveRequestStatus.MANAGER_APPROVED:
         return "bg-blue-100 text-blue-800";
-      case "approved":
+      case LeaveRequestStatus.HR_APPROVED:
         return "bg-green-100 text-green-800";
-      case "rejected":
+      case LeaveRequestStatus.MANAGER_REJECTED:
+      case LeaveRequestStatus.HR_REJECTED:
         return "bg-red-100 text-red-800";
-      case "cancelled":
+      case LeaveRequestStatus.CANCELLED:
         return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
@@ -29,15 +30,17 @@ const StatusBadge = ({ status }: { status: LeaveStatus }) => {
 
   const getStatusText = () => {
     switch (status) {
-      case "pending":
+      case LeaveRequestStatus.PENDING:
         return "Pending";
-      case "approved_by_manager":
+      case LeaveRequestStatus.MANAGER_APPROVED:
         return "Manager Approved";
-      case "approved":
-        return "Approved";
-      case "rejected":
-        return "Rejected";
-      case "cancelled":
+      case LeaveRequestStatus.HR_APPROVED:
+        return "HR Approved";
+      case LeaveRequestStatus.MANAGER_REJECTED:
+        return "Manager Rejected";
+      case LeaveRequestStatus.HR_REJECTED:
+        return "HR Rejected";
+      case LeaveRequestStatus.CANCELLED:
         return "Cancelled";
       default:
         return status;
@@ -54,9 +57,11 @@ const StatusBadge = ({ status }: { status: LeaveStatus }) => {
 };
 
 // Leave type badge component
-const LeaveTypeBadge = ({ type }: { type: LeaveType }) => {
+const LeaveTypeBadge = ({ type }: { type: string }) => {
+  const typeLower = type.toLowerCase();
+  
   const getTypeColor = () => {
-    switch (type) {
+    switch (typeLower) {
       case "annual":
         return "bg-blue-100 text-blue-800";
       case "sick":
@@ -73,20 +78,8 @@ const LeaveTypeBadge = ({ type }: { type: LeaveType }) => {
   };
 
   const getTypeText = () => {
-    switch (type) {
-      case "annual":
-        return "Annual";
-      case "sick":
-        return "Sick";
-      case "personal":
-        return "Personal";
-      case "unpaid":
-        return "Unpaid";
-      case "other":
-        return "Other";
-      default:
-        return type;
-    }
+    // Capitalize first letter
+    return type.charAt(0).toUpperCase() + type.slice(1);
   };
 
   return (
@@ -110,7 +103,7 @@ const formatDate = (dateString: string) => {
 
 export default function LeaveHistoryTable() {
   const { user } = useAuth();
-  const [filter, setFilter] = useState<LeaveStatus | "all">("all");
+  const [filter, setFilter] = useState<string>("all");
   
   if (!user) {
     return <div>Please log in to view your leave history.</div>;
@@ -165,15 +158,16 @@ export default function LeaveHistoryTable() {
             <select
               id="status-filter"
               value={filter}
-              onChange={(e) => setFilter(e.target.value as LeaveStatus | "all")}
+              onChange={(e) => setFilter(e.target.value)}
               className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
             >
               <option value="all">All Requests</option>
-              <option value="pending">Pending</option>
-              <option value="approved_by_manager">Manager Approved</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="cancelled">Cancelled</option>
+              <option value={LeaveRequestStatus.PENDING}>Pending</option>
+              <option value={LeaveRequestStatus.MANAGER_APPROVED}>Manager Approved</option>
+              <option value={LeaveRequestStatus.HR_APPROVED}>HR Approved</option>
+              <option value={LeaveRequestStatus.MANAGER_REJECTED}>Manager Rejected</option>
+              <option value={LeaveRequestStatus.HR_REJECTED}>HR Rejected</option>
+              <option value={LeaveRequestStatus.CANCELLED}>Cancelled</option>
             </select>
           </div>
           <Link

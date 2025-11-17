@@ -3,10 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery } from "@apollo/client/react";
-import { LeaveRequestsResponse, PendingApprovalsResponse, ManagerApprovedRequestsResponse } from "@/lib/leave/graphqlTypes";
+import { PendingApprovalsResponse } from "@/lib/leave/graphqlTypes";
 import { 
   GET_PENDING_APPROVALS, 
-  GET_MANAGER_APPROVED_REQUESTS,
   GET_LEAVE_REQUEST
 } from "@/lib/leave/leaveQueries";
 import {
@@ -161,56 +160,122 @@ export default function LeaveApprovalTableWithAPI() {
   const { user } = useAuth();
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRequests, setSelectedRequests] = useState<Set<string>>(new Set());
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | null>(null);
   
   if (!user) {
     return <div>Please log in to view leave approvals.</div>;
   }
 
   // Get leave requests based on user role
-  const { loading, error, data, refetch } = useQuery(
-    user.role === "manager" ? GET_PENDING_APPROVALS : GET_MANAGER_APPROVED_REQUESTS
+  // Both manager and HR use GET_PENDING_APPROVALS for consistency
+  const { loading, error, data, refetch } = useQuery<PendingApprovalsResponse>(
+    GET_PENDING_APPROVALS
   );
 
   // Mutations for approval/rejection
-  const [approveLeaveRequest, { loading: approveLoading }] = useMutation(APPROVE_LEAVE_REQUEST, {
-    onCompleted: () => {
-      refetch();
-    }
-  });
+  const [approveLeaveRequest, { loading: approveLoading }] = useMutation(APPROVE_LEAVE_REQUEST);
 
-  const [rejectLeaveRequest, { loading: rejectLoading }] = useMutation(REJECT_LEAVE_REQUEST, {
-    onCompleted: () => {
-      refetch();
-    }
-  });
+  const [rejectLeaveRequest, { loading: rejectLoading }] = useMutation(REJECT_LEAVE_REQUEST);
 
-  // Handle approval or rejection
+  // Handle single approval or rejection
   const handleAction = (requestId: string) => {
     setSelectedRequestId(requestId);
     setIsModalOpen(true);
   };
 
-  const handleSubmitDecision = (comment: string, approved: boolean) => {
+  const handleSubmitDecision = async (comment: string, approved: boolean) => {
     if (!selectedRequestId) return;
 
-    if (approved) {
-      approveLeaveRequest({
-        variables: {
-          id: selectedRequestId,
-          comment: comment || undefined
-        }
-      });
-    } else {
-      rejectLeaveRequest({
-        variables: {
-          id: selectedRequestId,
-          comment: comment
-        }
-      });
+    try {
+      if (approved) {
+        await approveLeaveRequest({
+          variables: {
+            id: selectedRequestId,
+            comment: comment || undefined
+          }
+        });
+      } else {
+        await rejectLeaveRequest({
+          variables: {
+            id: selectedRequestId,
+            comment: comment
+          }
+        });
+      }
+      
+      // Refetch after single action completes
+      await refetch();
+    } catch (error) {
+      console.error("Error processing request:", error);
     }
 
     setIsModalOpen(false);
     setSelectedRequestId(null);
+  };
+
+  // Handle bulk selection
+  const toggleSelectRequest = (requestId: string) => {
+    const newSelected = new Set(selectedRequests);
+    if (newSelected.has(requestId)) {
+      newSelected.delete(requestId);
+    } else {
+      newSelected.add(requestId);
+    }
+    setSelectedRequests(newSelected);
+  };
+
+  const toggleSelectAll = (requests: any[]) => {
+    if (selectedRequests.size === requests.length) {
+      setSelectedRequests(new Set());
+    } else {
+      setSelectedRequests(new Set(requests.map(r => r.id)));
+    }
+  };
+
+  // Handle bulk actions
+  const handleBulkAction = (action: 'approve' | 'reject') => {
+    if (selectedRequests.size === 0) return;
+    setBulkAction(action);
+    setIsBulkModalOpen(true);
+  };
+
+  const handleBulkSubmit = async (comment: string, approved: boolean) => {
+    const requestIds = Array.from(selectedRequests);
+    
+    try {
+      // Process all requests in parallel to avoid flashing
+      const promises = requestIds.map(id => {
+        if (approved) {
+          return approveLeaveRequest({
+            variables: {
+              id,
+              comment: comment || undefined
+            }
+          });
+        } else {
+          return rejectLeaveRequest({
+            variables: {
+              id,
+              comment: comment
+            }
+          });
+        }
+      });
+
+      // Wait for all mutations to complete
+      await Promise.all(promises);
+      
+      // Only refetch once after all mutations are done
+      await refetch();
+    } catch (error) {
+      console.error("Error processing bulk action:", error);
+    }
+
+    setIsBulkModalOpen(false);
+    setBulkAction(null);
+    setSelectedRequests(new Set());
   };
 
   if (loading) {
@@ -229,9 +294,8 @@ export default function LeaveApprovalTableWithAPI() {
     );
   }
 
-  const leaveRequests = user.role === "manager" 
-    ? (data as PendingApprovalsResponse)?.pendingApprovals || []
-    : (data as ManagerApprovedRequestsResponse)?.managerApprovedRequests || [];
+  // Get all pending approvals
+  const leaveRequests = data?.pendingApprovals || [];
 
   return (
     <div>
@@ -240,6 +304,16 @@ export default function LeaveApprovalTableWithAPI() {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleSubmitDecision}
         title={`${user.role === "manager" ? "Manager" : "HR"} Approval Decision`}
+      />
+
+      <CommentModal
+        isOpen={isBulkModalOpen}
+        onClose={() => {
+          setIsBulkModalOpen(false);
+          setBulkAction(null);
+        }}
+        onSubmit={handleBulkSubmit}
+        title={`Bulk ${bulkAction === 'approve' ? 'Approve' : 'Reject'} (${selectedRequests.size} requests)`}
       />
 
       <div className="mb-4 flex flex-col sm:flex-row sm:items-start sm:justify-between">
@@ -252,6 +326,24 @@ export default function LeaveApprovalTableWithAPI() {
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex space-x-3">
+          {selectedRequests.size > 0 && user.role === "manager" && (
+            <>
+              <button
+                onClick={() => handleBulkAction('approve')}
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Approve ({selectedRequests.size})
+              </button>
+              <button
+                onClick={() => handleBulkAction('reject')}
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Reject ({selectedRequests.size})
+              </button>
+            </>
+          )}
           <Link
             href="/dashboard/calendar"
             className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
@@ -277,6 +369,16 @@ export default function LeaveApprovalTableWithAPI() {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
+                  {user.role === "manager" && (
+                    <th scope="col" className="px-6 py-3 text-left">
+                      <input
+                        type="checkbox"
+                        checked={selectedRequests.size === leaveRequests.length && leaveRequests.length > 0}
+                        onChange={() => toggleSelectAll(leaveRequests)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </th>
+                  )}
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -318,6 +420,16 @@ export default function LeaveApprovalTableWithAPI() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {leaveRequests.map((request: any) => (
                   <tr key={request.id} className="hover:bg-gray-50">
+                    {user.role === "manager" && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedRequests.has(request.id)}
+                          onChange={() => toggleSelectRequest(request.id)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
@@ -363,20 +475,24 @@ export default function LeaveApprovalTableWithAPI() {
                         >
                           <Eye className="h-5 w-5" />
                         </Link>
-                        <button
-                          onClick={() => handleAction(request.id)}
-                          className="text-green-600 hover:text-green-900"
-                          disabled={approveLoading || rejectLoading}
-                        >
-                          <CheckCircle className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => handleAction(request.id)}
-                          className="text-red-600 hover:text-red-900"
-                          disabled={approveLoading || rejectLoading}
-                        >
-                          <XCircle className="h-5 w-5" />
-                        </button>
+                        {(user.role === "manager" || request.status === "manager_approved") && (
+                          <>
+                            <button
+                              onClick={() => handleAction(request.id)}
+                              className="text-green-600 hover:text-green-900"
+                              disabled={approveLoading || rejectLoading}
+                            >
+                              <CheckCircle className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleAction(request.id)}
+                              className="text-red-600 hover:text-red-900"
+                              disabled={approveLoading || rejectLoading}
+                            >
+                              <XCircle className="h-5 w-5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

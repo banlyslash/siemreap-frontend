@@ -269,6 +269,7 @@ export const GET_LEAVE_BALANCES = gql`
       year
       allocated
       used
+      pending
       remaining
       createdAt
       updatedAt
@@ -293,6 +294,7 @@ export const GET_LEAVE_BALANCE = gql`
       year
       allocated
       used
+      pending
       remaining
       createdAt
       updatedAt
@@ -539,5 +541,188 @@ export const UPDATE_HOLIDAY = gql`
 export const DELETE_HOLIDAY = gql`
   mutation DeleteHoliday($id: ID!) {
     deleteHoliday(id: $id)
+  }
+`;
+
+// New queries from updated schema
+export const GET_USER_LEAVE_BALANCES = gql`
+  query GetUserLeaveBalances($userId: ID!, $year: Int) {
+    userLeaveBalances(userId: $userId, year: $year) {
+      userId
+      year
+      balances {
+        id
+        leaveType {
+          id
+          name
+          color
+        }
+        year
+        allocated
+        used
+        pending
+        remaining
+      }
+    }
+  }
+`;
+
+export const GET_LEAVE_STATISTICS = gql`
+  query GetLeaveStatistics {
+    leaveStatistics {
+      pendingApprovals
+      totalEmployees
+      onLeaveToday
+      leaveReports {
+        leaveType {
+          id
+          name
+          color
+        }
+        count
+        percentage
+      }
+    }
+  }
+`;
+
+export const GET_HR_PENDING_APPROVALS = gql`
+  query GetHrPendingApprovals {
+    hrPendingApprovals {
+      id
+      user {
+        id
+        firstName
+        lastName
+        email
+      }
+      leaveType {
+        id
+        name
+        color
+      }
+      startDate
+      endDate
+      halfDay
+      reason
+      status
+      manager {
+        id
+        firstName
+        lastName
+      }
+      managerComment
+      managerActionAt
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+// New mutations from updated schema
+export const MANAGER_APPROVE_LEAVE_REQUEST = gql`
+  mutation ManagerApproveLeaveRequest($id: ID!, $comment: String) {
+    managerApproveLeaveRequest(id: $id, comment: $comment) {
+      id
+      status
+      manager {
+        id
+        firstName
+        lastName
+      }
+      managerComment
+      managerActionAt
+      updatedAt
+    }
+  }
+`;
+
+export const MANAGER_REJECT_LEAVE_REQUEST = gql`
+  mutation ManagerRejectLeaveRequest($id: ID!, $comment: String!) {
+    managerRejectLeaveRequest(id: $id, comment: $comment) {
+      id
+      status
+      manager {
+        id
+        firstName
+        lastName
+      }
+      managerComment
+      managerActionAt
+      updatedAt
+    }
+  }
+`;
+
+export const HR_APPROVE_LEAVE_REQUEST = gql`
+  mutation HrApproveLeaveRequest($id: ID!, $comment: String) {
+    hrApproveLeaveRequest(id: $id, comment: $comment) {
+      id
+      status
+      hr {
+        id
+        firstName
+        lastName
+      }
+      hrComment
+      hrActionAt
+      updatedAt
+    }
+  }
+`;
+
+export const HR_REJECT_LEAVE_REQUEST = gql`
+  mutation HrRejectLeaveRequest($id: ID!, $comment: String!) {
+    hrRejectLeaveRequest(id: $id, comment: $comment) {
+      id
+      status
+      hr {
+        id
+        firstName
+        lastName
+      }
+      hrComment
+      hrActionAt
+      updatedAt
+    }
+  }
+`;
+
+export const INITIALIZE_LEAVE_BALANCE = gql`
+  mutation InitializeLeaveBalance($input: InitializeLeaveBalanceInput!) {
+    initializeLeaveBalance(input: $input) {
+      success
+      message
+      balances {
+        id
+        leaveType {
+          id
+          name
+        }
+        year
+        allocated
+        used
+        pending
+        remaining
+      }
+    }
+  }
+`;
+
+export const CREATE_LEAVE_BATCH = gql`
+  mutation CreateLeaveBatch($input: CreateLeaveBatchInput!) {
+    createLeaveBatch(input: $input) {
+      success
+      message
+      leaveRequests {
+        id
+        startDate
+        endDate
+        halfDay
+        status
+      }
+      numberOfDays
+      remainingBalance
+    }
   }
 `;

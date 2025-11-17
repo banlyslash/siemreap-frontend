@@ -7,6 +7,10 @@ import { useAuth } from "@/lib/auth/AuthContext";
 import FormField from "./FormField";
 import PasswordInput from "./PasswordInput";
 import SubmitButton from "./SubmitButton";
+import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 interface SignupFormProps {
   onSuccess?: () => void;

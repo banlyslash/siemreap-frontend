@@ -34,6 +34,8 @@ export interface LeaveRequest {
   startDate: string; // ISO date string
   endDate: string; // ISO date string
   halfDay: boolean;
+  halfDayStart?: boolean; // New field
+  halfDayEnd?: boolean; // New field
   reason?: string;
   status: LeaveRequestStatus;
   manager?: User;
@@ -53,6 +55,7 @@ export interface LeaveBalance {
   year: number;
   allocated: number;
   used: number;
+  pending: number; // New field
   remaining: number;
   createdAt: string;
   updatedAt: string;
@@ -74,6 +77,8 @@ export interface CreateLeaveRequestInput {
   startDate: string; // ISO date string
   endDate: string; // ISO date string
   halfDay?: boolean;
+  halfDayStart?: boolean; // New field
+  halfDayEnd?: boolean; // New field
   reason?: string;
 }
 
@@ -82,6 +87,8 @@ export interface UpdateLeaveRequestInput {
   startDate?: string;
   endDate?: string;
   halfDay?: boolean;
+  halfDayStart?: boolean; // New field
+  halfDayEnd?: boolean; // New field
   reason?: string;
   status?: LeaveRequestStatus;
   managerId?: string;
@@ -121,4 +128,22 @@ export interface UpdateHolidayInput {
   name?: string;
   date?: string;
   description?: string;
+}
+
+// New input types from updated schema
+export interface InitializeLeaveBalanceInput {
+  userId: string;
+  year?: number;
+  defaultAllocation: number;
+}
+
+export interface LeaveEntry {
+  leaveOn: string; // ISO date string
+  isHalfDay: boolean;
+}
+
+export interface CreateLeaveBatchInput {
+  leaves: LeaveEntry[];
+  leaveTypeName?: string;
+  userEmail?: string;
 }

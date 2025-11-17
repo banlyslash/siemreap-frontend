@@ -84,6 +84,22 @@ export interface LeaveBalanceResponse {
   leaveBalance: LeaveBalance;
 }
 
+export interface UserLeaveBalancesResponse {
+  userLeaveBalances: {
+    userId: string;
+    year: number;
+    balances: LeaveBalance[];
+  };
+}
+
+export interface LeaveBalancesByEmailResponse {
+  leaveBalancesByEmail: {
+    userId: string;
+    year: number;
+    balances: LeaveBalance[];
+  };
+}
+
 // Holiday queries
 export interface HolidaysResponse {
   holidays: Holiday[];
@@ -136,6 +152,107 @@ export interface UpdateHolidayResponse {
 
 export interface DeleteHolidayResponse {
   deleteHoliday: boolean;
+}
+
+// New mutation responses for role-specific approvals
+export interface ManagerApproveLeaveRequestResponse {
+  managerApproveLeaveRequest: LeaveRequest;
+}
+
+export interface ManagerRejectLeaveRequestResponse {
+  managerRejectLeaveRequest: LeaveRequest;
+}
+
+export interface HrApproveLeaveRequestResponse {
+  hrApproveLeaveRequest: LeaveRequest;
+}
+
+export interface HrRejectLeaveRequestResponse {
+  hrRejectLeaveRequest: LeaveRequest;
+}
+
+// Leave batch creation
+export interface CreateLeaveBatchResponse {
+  createLeaveBatch: {
+    success: boolean;
+    message: string;
+    leaveRequests: LeaveRequest[];
+    numberOfDays: number;
+    remainingBalance: number;
+  };
+}
+
+// Leave balance initialization
+export interface InitializeLeaveBalanceResponse {
+  initializeLeaveBalance: {
+    success: boolean;
+    message?: string | null;
+    balances?: LeaveBalance[] | null;
+  };
+}
+
+// Leave history and audit
+export interface LeaveHistoryResponse {
+  leaveHistory: {
+    items: LeaveRequest[];
+    total: number;
+    page: number;
+    pageSize: number;
+    hasMore: boolean;
+  };
+}
+
+export interface LeaveAuditEntry {
+  id: string;
+  leaveRequestId: string;
+  action: LeaveAuditAction;
+  performedBy: User;
+  timestamp: string;
+  details?: string | null;
+  previousStatus?: string | null;
+  newStatus?: string | null;
+}
+
+export type LeaveAuditAction = 
+  | 'created'
+  | 'updated'
+  | 'status_changed'
+  | 'approved_by_manager'
+  | 'rejected_by_manager'
+  | 'approved_by_hr'
+  | 'rejected_by_hr'
+  | 'cancelled';
+
+export interface LeaveAuditTrailResponse {
+  leaveAuditTrail: LeaveAuditEntry[];
+}
+
+// Export leave history
+export interface ExportLeaveHistoryResponse {
+  exportLeaveHistory: {
+    url: string;
+    filename: string;
+    expiresAt: string;
+  };
+}
+
+// Statistics
+export interface LeaveStatisticsResponse {
+  leaveStatistics: {
+    pendingApprovals: number;
+    totalEmployees: number;
+    onLeaveToday: number;
+    leaveReports: Array<{
+      leaveType: LeaveType;
+      count: number;
+      percentage: number;
+    }>;
+  };
+}
+
+// HR pending approvals
+export interface HrPendingApprovalsResponse {
+  hrPendingApprovals: LeaveRequest[];
 }
 
 // -----------------------------------------------
@@ -258,6 +375,7 @@ export interface GetLeaveBalancesResponseV2 {
     year: number;
     allocated: number;
     used: number;
+    pending: number;
     remaining: number;
   }>;
 }
