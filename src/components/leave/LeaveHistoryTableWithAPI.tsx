@@ -105,15 +105,16 @@ export default function LeaveHistoryTable() {
   const { user } = useAuth();
   const [filter, setFilter] = useState<string>("all");
   
+  // Fetch leave requests for the current user
+  const { loading, error, data } = useQuery<LeaveRequestsResponse>(GET_LEAVE_REQUESTS, {
+    variables: { employeeId: user?.id },
+    fetchPolicy: "cache-and-network",
+    skip: !user
+  });
+  
   if (!user) {
     return <div>Please log in to view your leave history.</div>;
   }
-
-  // Fetch leave requests for the current user
-  const { loading, error, data } = useQuery<LeaveRequestsResponse>(GET_LEAVE_REQUESTS, {
-    variables: { employeeId: user.id },
-    fetchPolicy: "cache-and-network"
-  });
 
   if (loading && !data) {
     return (

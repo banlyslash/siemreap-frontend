@@ -47,18 +47,19 @@ const leaveTypeNames: Record<LeaveType['name'], string> = {
 export default function LeaveBalanceCard() {
   const { user } = useAuth();
   
-  if (!user) {
-    return null;
-  }
-
   // Fetch leave balances for the current user
   const { loading, error, data } = useQuery<LeaveBalancesResponse>(GET_LEAVE_BALANCES, {
     variables: { 
-      userId: user.id,
+      userId: user?.id,
       year: new Date().getFullYear()
     },
-    fetchPolicy: "cache-and-network"
+    fetchPolicy: "cache-and-network",
+    skip: !user
   });
+  
+  if (!user) {
+    return null;
+  }
 
   if (loading && !data) {
     return (

@@ -164,20 +164,23 @@ export default function LeaveApprovalTableWithAPI() {
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<'approve' | 'reject' | null>(null);
   
-  if (!user) {
-    return <div>Please log in to view leave approvals.</div>;
-  }
-
   // Get leave requests based on user role
   // Both manager and HR use GET_PENDING_APPROVALS for consistency
   const { loading, error, data, refetch } = useQuery<PendingApprovalsResponse>(
-    GET_PENDING_APPROVALS
+    GET_PENDING_APPROVALS,
+    {
+      skip: !user
+    }
   );
 
   // Mutations for approval/rejection
   const [approveLeaveRequest, { loading: approveLoading }] = useMutation(APPROVE_LEAVE_REQUEST);
 
   const [rejectLeaveRequest, { loading: rejectLoading }] = useMutation(REJECT_LEAVE_REQUEST);
+  
+  if (!user) {
+    return <div>Please log in to view leave approvals.</div>;
+  }
 
   // Handle single approval or rejection
   const handleAction = (requestId: string) => {
