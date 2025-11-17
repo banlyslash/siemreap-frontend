@@ -5,6 +5,10 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthContext";
 import FormField from "./FormField";
 import SubmitButton from "./SubmitButton";
+import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 interface LoginFormProps {
   onSuccess?: () => void;

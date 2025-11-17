@@ -8,6 +8,10 @@ import { GET_LEAVE_TYPES, CREATE_LEAVE_REQUEST } from "@/lib/leave/leaveQueries"
 import { useAuth } from "@/lib/auth/AuthContext";
 import SubmitButton from "../auth/SubmitButton";
 import { CreateLeaveRequestInput } from "@/lib/leave/types";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 
 export default function LeaveRequestForm() {
   const router = useRouter();
@@ -196,22 +200,15 @@ export default function LeaveRequestForm() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <div>
-            <label
-              htmlFor="startDate"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <Label htmlFor="startDate">
               Start Date<span className="text-red-500 ml-1">*</span>
-            </label>
-            <input
+            </Label>
+            <Input
               id="startDate"
               type="date"
               value={formData.startDate}
               onChange={(e) => handleInputChange("startDate", e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-0 ${
-                errors.startDate
-                  ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                  : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-              }`}
+              className={errors.startDate ? "border-red-500" : ""}
               required
             />
             {errors.startDate && (
@@ -222,22 +219,15 @@ export default function LeaveRequestForm() {
 
         <div>
           <div>
-            <label
-              htmlFor="endDate"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
+            <Label htmlFor="endDate">
               End Date<span className="text-red-500 ml-1">*</span>
-            </label>
-            <input
+            </Label>
+            <Input
               id="endDate"
               type="date"
               value={formData.endDate}
               onChange={(e) => handleInputChange("endDate", e.target.value)}
-              className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-0 ${
-                errors.endDate
-                  ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-                  : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-              }`}
+              className={errors.endDate ? "border-red-500" : ""}
               required
             />
             {errors.endDate && (
@@ -247,7 +237,7 @@ export default function LeaveRequestForm() {
         </div>
       </div>
 
-      <div className="flex items-center">
+      <div className="flex items-center space-x-2">
         <input
           id="halfDay"
           type="checkbox"
@@ -255,29 +245,24 @@ export default function LeaveRequestForm() {
           onChange={(e) => handleInputChange("halfDay", e.target.checked)}
           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
         />
-        <label
+        <Label
           htmlFor="halfDay"
-          className="ml-2 block text-sm text-gray-700"
+          className="text-sm font-normal cursor-pointer"
         >
           Half day
-        </label>
+        </Label>
       </div>
 
       <div>
-        <label
-          htmlFor="leaveTypeId"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
+        <Label htmlFor="leaveTypeId">
           Leave Type<span className="text-red-500 ml-1">*</span>
-        </label>
+        </Label>
         <select
           id="leaveTypeId"
           value={formData.leaveTypeId}
           onChange={(e) => handleInputChange("leaveTypeId", e.target.value)}
-          className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-0 ${
-            errors.leaveTypeId
-              ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-              : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+          className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+            errors.leaveTypeId ? "border-red-500" : ""
           }`}
           required
         >
@@ -294,25 +279,18 @@ export default function LeaveRequestForm() {
       </div>
 
       <div>
-        <label
-          htmlFor="reason"
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
+        <Label htmlFor="reason">
           Reason<span className="text-red-500 ml-1">*</span>
-        </label>
-        <textarea
+        </Label>
+        <Textarea
           id="reason"
           value={formData.reason}
           onChange={(e) => handleInputChange("reason", e.target.value)}
           rows={4}
-          className={`w-full px-3 py-2 border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-0 ${
-            errors.reason
-              ? "border-red-300 text-red-900 focus:border-red-500 focus:ring-red-500"
-              : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-          }`}
+          className={errors.reason ? "border-red-500" : ""}
           placeholder="Please provide a reason for your leave request"
           required
-        ></textarea>
+        />
         {errors.reason && (
           <p className="mt-1 text-sm text-red-600">{errors.reason}</p>
         )}
@@ -321,14 +299,19 @@ export default function LeaveRequestForm() {
         </p>
       </div>
 
-      <div className="flex justify-between">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+      <div className="flex justify-between gap-4">
+        <Button
+          type="button"
+          variant="outline"
+          asChild
         >
-          Back to Dashboard
-        </Link>
-        <SubmitButton isLoading={isLoading || mutationLoading}>Submit Request</SubmitButton>
+          <Link href="/dashboard">
+            Back to Dashboard
+          </Link>
+        </Button>
+        <Button type="submit" disabled={isLoading || mutationLoading}>
+          {isLoading || mutationLoading ? "Submitting..." : "Submit Request"}
+        </Button>
       </div>
     </form>
   );

@@ -5,12 +5,17 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { GET_PENDING_APPROVALS, APPROVE_LEAVE_REQUEST } from "@/lib/leave/leaveQueries";
+import { GET_PENDING_APPROVALS, APPROVE_LEAVE_REQUEST, REJECT_LEAVE_REQUEST } from "@/lib/leave/leaveQueries";
 import { GET_LEAVE_STATISTICS } from "@/lib/graphql/queries/dashboard";
 import { AlertCircle, Calendar, CheckCircle, Clock, PieChart, Users, CalendarDays, Building } from "lucide-react";
 import { PendingApprovalsResponse, ApproveLeaveRequestResponse } from "@/lib/leave/graphqlTypes";
 import { LeaveRequest } from "@/lib/leave/types";
 import { LeaveStatisticsResponse } from "@/lib/graphql/types/dashboard";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export default function HRDashboardPage() {
   const { user, loading } = useAuth();
@@ -40,7 +45,14 @@ export default function HRDashboardPage() {
   });
 
   // Process HR approval mutation
-  const [processApproval, { loading: processingApproval }] = useMutation<ApproveLeaveRequestResponse>(APPROVE_LEAVE_REQUEST, {
+  const [approveLeaveRequest, { loading: approvingRequest }] = useMutation<ApproveLeaveRequestResponse>(APPROVE_LEAVE_REQUEST, {
+    onCompleted: () => {
+      refetch();
+      statsRefetch();
+    }
+  });
+
+  const [rejectLeaveRequest, { loading: rejectingRequest }] = useMutation(REJECT_LEAVE_REQUEST, {
     onCompleted: () => {
       refetch();
       statsRefetch();
@@ -52,16 +64,21 @@ export default function HRDashboardPage() {
     if (!user) return;
     
     try {
-      await processApproval({
-        variables: {
-          input: {
-            requestId,
-            approverId: user.id,
-            approved,
-            comments
+      if (approved) {
+        await approveLeaveRequest({
+          variables: {
+            id: requestId,
+            comment: comments || undefined
           }
-        }
-      });
+        });
+      } else {
+        await rejectLeaveRequest({
+          variables: {
+            id: requestId,
+            comment: comments || "Rejected by HR"
+          }
+        });
+      }
     } catch (error) {
       console.error("Error processing approval:", error);
     }
@@ -278,22 +295,29 @@ export default function HRDashboardPage() {
                               </p>
                             </div>
                           </div>
-                          <div className="flex space-x-2">
-                            <button
-                              className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
-                              onClick={() => handleApproval(request.id, true)}
-                              disabled={processingApproval}
-                            >
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Approve
-                            </button>
-                            <button
-                              className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                              onClick={() => handleApproval(request.id, false)}
-                              disabled={processingApproval}
-                            >
-                              Reject
-                            </button>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {request.status.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                            </Badge>
+                            {request.status === "manager_approved" && (
+                              <div className="flex space-x-2">
+                                <button
+                                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
+                                  onClick={() => handleApproval(request.id, true)}
+                                  disabled={approvingRequest || rejectingRequest}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Approve
+                                </button>
+                                <button
+                                  className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                                  onClick={() => handleApproval(request.id, false)}
+                                  disabled={approvingRequest || rejectingRequest}
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </li>

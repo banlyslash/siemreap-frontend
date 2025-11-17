@@ -47,18 +47,19 @@ const leaveTypeNames: Record<LeaveType['name'], string> = {
 export default function LeaveBalanceCard() {
   const { user } = useAuth();
   
-  if (!user) {
-    return null;
-  }
-
   // Fetch leave balances for the current user
   const { loading, error, data } = useQuery<LeaveBalancesResponse>(GET_LEAVE_BALANCES, {
     variables: { 
-      userId: user.id,
+      userId: user?.id,
       year: new Date().getFullYear()
     },
-    fetchPolicy: "cache-and-network"
+    fetchPolicy: "cache-and-network",
+    skip: !user
   });
+  
+  if (!user) {
+    return null;
+  }
 
   if (loading && !data) {
     return (
@@ -118,7 +119,7 @@ export default function LeaveBalanceCard() {
       </div>
       
       <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-4">
           {leaveTypes.map((type) => {
             const balance = leaveBalanceMap[type];
             if (!balance) return null;
@@ -129,42 +130,47 @@ export default function LeaveBalanceCard() {
             return (
               <div
                 key={type}
-                className={`border ${colors.border} rounded-lg overflow-hidden`}
+                className={`border ${colors.border} rounded-lg p-4 hover:shadow-md transition-shadow`}
               >
-                <div className={`${colors.bg} px-4 py-2`}>
-                  <h3 className={`text-sm font-medium ${colors.text}`}>
-                    {leaveTypeNames[type]}
-                  </h3>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <div className={`w-4 h-4 rounded-full ${colors.bg} ${colors.border} border-2 mr-3`}></div>
+                    <h3 className="text-base font-semibold text-gray-900">
+                      {leaveTypeNames[type] || type}
+                    </h3>
+                  </div>
+                  <span className="text-xs font-medium text-gray-500">{percentage}% used</span>
                 </div>
                 
-                <div className="px-4 py-4">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-500">Used</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {balance.used} / {balance.entitled} days
-                    </span>
+                <div className="grid grid-cols-4 gap-4 mb-3">
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-1">Allocated</p>
+                    <p className="text-lg font-semibold text-gray-900">{balance.entitled}</p>
+                    <p className="text-xs text-gray-400">days</p>
                   </div>
-                  
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-1">Used</p>
+                    <p className="text-lg font-semibold text-gray-900">{balance.used}</p>
+                    <p className="text-xs text-gray-400">days</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-1">Pending</p>
+                    <p className="text-lg font-semibold text-orange-600">{balance.pending}</p>
+                    <p className="text-xs text-gray-400">days</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-500 mb-1">Remaining</p>
+                    <p className="text-lg font-semibold text-blue-600">{balance.remaining}</p>
+                    <p className="text-xs text-gray-400">days</p>
+                  </div>
+                </div>
+                
+                <div className="w-full">
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
                     <div
-                      className="bg-blue-600 h-2.5 rounded-full"
-                      style={{ width: `${percentage}%` }}
+                      className={`h-2.5 rounded-full transition-all ${percentage > 80 ? 'bg-red-500' : percentage > 50 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                      style={{ width: `${Math.min(percentage, 100)}%` }}
                     ></div>
-                  </div>
-                  
-                  <div className="mt-4 grid grid-cols-2 gap-4 text-center">
-                    <div>
-                      <span className="block text-sm text-gray-500">Pending</span>
-                      <span className="block mt-1 text-lg font-medium text-gray-900">
-                        {balance.pending}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="block text-sm text-gray-500">Remaining</span>
-                      <span className="block mt-1 text-lg font-medium text-gray-900">
-                        {balance.remaining}
-                      </span>
-                    </div>
                   </div>
                 </div>
               </div>
