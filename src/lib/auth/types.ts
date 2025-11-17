@@ -7,7 +7,8 @@ export interface Department {
 
 export interface User {
   id: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   emailVerified: boolean;
   avatarUrl?: string;
@@ -29,7 +30,8 @@ export interface LoginCredentials {
 }
 
 export interface SignupCredentials {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
   role?: UserRole;

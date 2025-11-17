@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
-import EmployeeForm from "@/components/leave/EmployeeForm";
+import EmployeeFormWithAPI from "@/components/leave/EmployeeFormWithAPI";
 
 export default function AddEmployeePage() {
   const router = useRouter();
@@ -28,7 +28,7 @@ export default function AddEmployeePage() {
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-6">Add New Employee</h2>
-            <EmployeeForm 
+            <EmployeeFormWithAPI 
               onSuccess={handleSuccess}
               onCancel={handleCancel}
             />
@@ -38,3 +38,4 @@ export default function AddEmployeePage() {
     </div>
   );
 }
+

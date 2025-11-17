@@ -154,7 +154,6 @@ export default function DepartmentManagement() {
       resetFormData();
       
     } catch (error) {
-      console.error("Error updating department:", error);
       alert("Failed to update department. Please try again.");
     } finally {
       setIsLoading(false);

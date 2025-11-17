@@ -119,3 +119,24 @@ export const UPDATE_LEAVE_BALANCE_MUTATION = gql`
     }
   }
 `;
+
+export const INITIALIZE_LEAVE_BALANCE_MUTATION = gql`
+  mutation InitializeLeaveBalance($input: InitializeLeaveBalanceInput!) {
+    initializeLeaveBalance(input: $input) {
+      success
+      message
+      balances {
+        id
+        leaveType {
+          id
+          name
+          color
+        }
+        allocated
+        used
+        remaining
+        year
+      }
+    }
+  }
+`;

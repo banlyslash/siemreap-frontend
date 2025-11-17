@@ -6,8 +6,11 @@ import Link from "next/link";
 import { useQuery, useMutation } from "@apollo/client/react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { GET_PENDING_APPROVALS, APPROVE_LEAVE_REQUEST } from "@/lib/leave/leaveQueries";
+import { GET_LEAVE_STATISTICS } from "@/lib/graphql/queries/dashboard";
 import { AlertCircle, Calendar, CheckCircle, Clock, PieChart, Users, CalendarDays, Building } from "lucide-react";
-import { PendingApprovalsResponse, ApprovalResponse } from "@/lib/leave/graphqlTypes";
+import { PendingApprovalsResponse, ApproveLeaveRequestResponse } from "@/lib/leave/graphqlTypes";
+import { LeaveRequest } from "@/lib/leave/types";
+import { LeaveStatisticsResponse } from "@/lib/graphql/types/dashboard";
 
 export default function HRDashboardPage() {
   const { user, loading } = useAuth();
@@ -30,10 +33,17 @@ export default function HRDashboardPage() {
     fetchPolicy: "cache-and-network"
   });
 
+  // Fetch HR dashboard statistics
+  const { data: statsData, loading: loadingStats, refetch: statsRefetch } = useQuery<LeaveStatisticsResponse>(GET_LEAVE_STATISTICS, {
+    skip: !user || user.role !== "hr",
+    fetchPolicy: "cache-and-network"
+  });
+
   // Process HR approval mutation
-  const [processApproval, { loading: processingApproval }] = useMutation<ApprovalResponse>(APPROVE_LEAVE_REQUEST, {
+  const [processApproval, { loading: processingApproval }] = useMutation<ApproveLeaveRequestResponse>(APPROVE_LEAVE_REQUEST, {
     onCompleted: () => {
       refetch();
+      statsRefetch();
     }
   });
 
@@ -72,6 +82,9 @@ export default function HRDashboardPage() {
   // Get pending approvals from query data
   const pendingApprovals = data?.pendingApprovals || [];
 
+  // Get dashboard statistics
+  const dashboardStats = statsData?.leaveStatistics;
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -98,7 +111,7 @@ export default function HRDashboardPage() {
                     </dt>
                     <dd>
                       <div className="text-lg font-medium text-gray-900">
-                        {loadingApprovals ? "..." : pendingApprovals.length}
+                        {loadingStats ? "..." : dashboardStats?.pendingApprovals || 0}
                       </div>
                     </dd>
                   </dl>
@@ -131,7 +144,7 @@ export default function HRDashboardPage() {
                     </dt>
                     <dd>
                       <div className="text-lg font-medium text-gray-900">
-                        10
+                        {loadingStats ? "..." : dashboardStats?.totalEmployees || 0}
                       </div>
                     </dd>
                   </dl>
@@ -164,7 +177,7 @@ export default function HRDashboardPage() {
                     </dt>
                     <dd>
                       <div className="text-lg font-medium text-gray-900">
-                        2
+                        {loadingStats ? "..." : dashboardStats?.onLeaveToday || 0}
                       </div>
                     </dd>
                   </dl>
@@ -197,7 +210,7 @@ export default function HRDashboardPage() {
                     </dt>
                     <dd>
                       <div className="text-lg font-medium text-gray-900">
-                        5
+                        {loadingStats ? "..." : dashboardStats?.leaveReports?.count || 0}
                       </div>
                     </dd>
                   </dl>
@@ -242,7 +255,7 @@ export default function HRDashboardPage() {
                 </div>
               ) : (
                 <ul className="divide-y divide-gray-200">
-                  {pendingApprovals.slice(0, 3).map((request: any) => {
+                  {pendingApprovals.slice(0, 3).map((request: LeaveRequest) => {
                     // Format dates
                     const startDate = new Date(request.startDate).toLocaleDateString();
                     const endDate = new Date(request.endDate).toLocaleDateString();
@@ -258,10 +271,10 @@ export default function HRDashboardPage() {
                             </div>
                             <div className="ml-4">
                               <p className="text-sm font-medium text-gray-900">
-                                {request.employee.firstName} {request.employee.lastName}
+                                {request.user.firstName} {request.user.lastName}
                               </p>
                               <p className="text-sm text-gray-500">
-                                {request.leaveType.charAt(0).toUpperCase() + request.leaveType.slice(1)} Leave: {startDate} - {endDate}
+                                {request.leaveType.name.charAt(0).toUpperCase() + request.leaveType.name.slice(1)} Leave: {startDate} - {endDate}
                               </p>
                             </div>
                           </div>
