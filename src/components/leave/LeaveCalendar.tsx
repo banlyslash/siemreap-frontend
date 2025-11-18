@@ -1,20 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { mockLeaveRequests, mockHolidays } from "@/lib/leave/mockLeaveData";
-import { LeaveType } from "@/lib/leave/types";
+import { useHoliday } from "@/lib/holiday/HolidayContext";
+import { mockLeaveRequests } from "@/lib/leave/mockLeaveData";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import HolidayList from "./HolidayList";
 
-// Leave type color mapping
-const leaveTypeColors: Record<LeaveType, string> = {
+// Leave type color mapping for mock data (string-based)
+const leaveTypeColors: Record<string, string> = {
   annual: "bg-blue-200",
   sick: "bg-red-200",
   personal: "bg-purple-200",
   unpaid: "bg-gray-200",
   other: "bg-green-200",
 };
+
+// Type for mock leave data structure
+interface MockLeaveRequest {
+  id: string;
+  employeeId: string;
+  startDate: string;
+  endDate: string;
+  leaveType: string;
+  status: string;
+  [key: string]: unknown;
+}
 
 interface CalendarDay {
   date: Date;
@@ -24,7 +36,7 @@ interface CalendarDay {
     id: string;
     employeeId: string;
     employeeName: string;
-    leaveType: LeaveType;
+    leaveType: string; // Mock data uses string, not LeaveType object
   }[];
   isHoliday?: boolean;
   holidayName?: string;
@@ -32,16 +44,22 @@ interface CalendarDay {
 
 export default function LeaveCalendar() {
   const { user } = useAuth();
+  const { holidays, error: holidaysError, fetchHolidays } = useHoliday();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<"team" | "personal">("team");
-
-  if (!user) {
-    return <div>Please log in to view the leave calendar.</div>;
-  }
 
   // Get current month and year
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
+
+  // Fetch holidays when component mounts or year changes
+  useEffect(() => {
+    fetchHolidays(currentYear);
+  }, [currentYear, fetchHolidays]);
+
+  if (!user) {
+    return <div>Please log in to view the leave calendar.</div>;
+  }
 
   // Navigate to previous month
   const prevMonth = () => {
@@ -109,7 +127,7 @@ export default function LeaveCalendar() {
         today.getFullYear() === currentYear;
 
       // Check for leaves on this day
-      const leaves = mockLeaveRequests
+      const leaves = (mockLeaveRequests as unknown as MockLeaveRequest[])
         .filter((leave) => {
           // Only show approved leaves or those approved by manager
           if (leave.status !== "approved" && leave.status !== "approved_by_manager") {
@@ -135,12 +153,12 @@ export default function LeaveCalendar() {
         }));
 
       // Check for holidays
-      const holiday = mockHolidays.find((h) => {
+      const holiday = holidays.find((h) => {
         const holidayDate = new Date(h.date);
         return (
           date.getDate() === holidayDate.getDate() &&
           date.getMonth() === holidayDate.getMonth() &&
-          (date.getFullYear() === holidayDate.getFullYear() || h.isRecurringYearly)
+          date.getFullYear() === holidayDate.getFullYear()
         );
       });
 
@@ -181,6 +199,24 @@ export default function LeaveCalendar() {
 
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden">
+      {/* Holiday Error Banner */}
+      {holidaysError && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                Unable to load holidays. {holidaysError}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="px-4 py-5 sm:px-6 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
         <h2 className="text-lg font-medium text-gray-900">Leave Calendar</h2>
         <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
@@ -326,6 +362,13 @@ export default function LeaveCalendar() {
           </div>
         </div>
       </div>
+
+      {/* Holiday List */}
+      <HolidayList 
+        holidays={holidays} 
+        currentMonth={currentMonth} 
+        currentYear={currentYear} 
+      />
     </div>
   );
 }
