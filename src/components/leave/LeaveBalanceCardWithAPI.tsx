@@ -6,8 +6,8 @@ import { GET_LEAVE_BALANCES } from "@/lib/leave/leaveQueries";
 import { LeaveType } from "@/lib/leave/types";
 import { LeaveBalancesResponse } from "@/lib/leave/graphqlTypes";
 
-// Leave type color mapping
-const leaveTypeColors: Record<LeaveType['name'], { bg: string; text: string; border: string }> = {
+// Leave type color mapping - using actual leave type names from API
+const leaveTypeColors: Record<string, { bg: string; text: string; border: string }> = {
   "Annual Leave": {
     bg: "bg-blue-50",
     text: "text-blue-700",
@@ -23,25 +23,33 @@ const leaveTypeColors: Record<LeaveType['name'], { bg: string; text: string; bor
     text: "text-purple-700",
     border: "border-purple-200",
   },
-  unpaid: {
+  "Bereavement Leave": {
     bg: "bg-gray-50",
     text: "text-gray-700",
     border: "border-gray-200",
   },
-  other: {
-    bg: "bg-green-50",
-    text: "text-green-700",
-    border: "border-green-200",
+  "Maternity Leave": {
+    bg: "bg-pink-50",
+    text: "text-pink-700",
+    border: "border-pink-200",
+  },
+  "Paternity Leave": {
+    bg: "bg-teal-50",
+    text: "text-teal-700",
+    border: "border-teal-200",
+  },
+  "Study Leave": {
+    bg: "bg-amber-50",
+    text: "text-amber-700",
+    border: "border-amber-200",
   },
 };
 
-// Leave type display names
-const leaveTypeNames: Record<LeaveType['name'], string> = {
-  annual: "Annual Leave",
-  sick: "Sick Leave",
-  personal: "Personal Leave",
-  unpaid: "Unpaid Leave",
-  other: "Other Leave",
+// Default colors for unknown leave types
+const defaultColors = {
+  bg: "bg-green-50",
+  text: "text-green-700",
+  border: "border-green-200",
 };
 
 export default function LeaveBalanceCard() {
@@ -124,7 +132,7 @@ export default function LeaveBalanceCard() {
             const balance = leaveBalanceMap[type];
             if (!balance) return null;
             
-            const colors = leaveTypeColors[type];
+            const colors = leaveTypeColors[type] || defaultColors;
             const percentage = Math.round((balance.used / balance.entitled) * 100);
             
             return (
@@ -136,7 +144,7 @@ export default function LeaveBalanceCard() {
                   <div className="flex items-center">
                     <div className={`w-4 h-4 rounded-full ${colors.bg} ${colors.border} border-2 mr-3`}></div>
                     <h3 className="text-base font-semibold text-gray-900">
-                      {leaveTypeNames[type] || type}
+                      {type}
                     </h3>
                   </div>
                   <span className="text-xs font-medium text-gray-500">{percentage}% used</span>
