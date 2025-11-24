@@ -1,43 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@apollo/client/react";
 import { useAuth } from "@/lib/auth/AuthContext";
+import type { User } from "@/lib/auth/types";
 import { useHoliday } from "@/lib/holiday/HolidayContext";
-import { mockLeaveRequests } from "@/lib/leave/mockLeaveData";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, Plus } from "lucide-react";
 import HolidayList from "./HolidayList";
-
-// Leave type color mapping for mock data (string-based)
-const leaveTypeColors: Record<string, string> = {
-  annual: "bg-blue-200",
-  sick: "bg-red-200",
-  personal: "bg-purple-200",
-  unpaid: "bg-gray-200",
-  other: "bg-green-200",
-};
-
-// Type for mock leave data structure
-interface MockLeaveRequest {
-  id: string;
-  employeeId: string;
-  startDate: string;
-  endDate: string;
-  leaveType: string;
-  status: string;
-  [key: string]: unknown;
-}
+import {
+  GET_LEAVE_REQUESTS,
+  GET_LEAVE_TYPES,
+  GET_USERS,
+  GET_TEAM_MEMBERS,
+} from "@/lib/leave/leaveQueries";
+import LeaveRequestModal from "./LeaveRequestModal";
+import LeaveDetailsModal, { CalendarLeaveRequest } from "./LeaveDetailsModal";
+import { Button } from "@/components/ui/button";
+import { LeaveRequestStatus, LeaveType } from "@/lib/leave/types";
 
 interface CalendarDay {
   date: Date;
   isCurrentMonth: boolean;
   isToday: boolean;
-  leaves: {
-    id: string;
-    employeeId: string;
-    employeeName: string;
-    leaveType: string; // Mock data uses string, not LeaveType object
-  }[];
+  leaves: CalendarLeaveRequest[];
   isHoliday?: boolean;
   holidayName?: string;
 }
@@ -46,298 +31,312 @@ export default function LeaveCalendar() {
   const { user } = useAuth();
   const { holidays, error: holidaysError, fetchHolidays } = useHoliday();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<"team" | "personal">("team");
+  
+  // State for modals
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedLeave, setSelectedLeave] = useState<CalendarLeaveRequest | null>(null);
+
+  // State for filters
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterEmployee, setFilterEmployee] = useState<string>("all");
 
   // Get current month and year
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
 
-  // Fetch holidays when component mounts or year changes
+  // Calculate View Range (42 days: 6 weeks * 7 days)
+  const { viewStartDate, viewEndDate } = useMemo(() => {
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay(); // 0 (Sun) - 6 (Sat)
+    
+    const start = new Date(currentYear, currentMonth, 1);
+    start.setDate(1 - firstDayOfMonth); // Go back to Sunday
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(start);
+    end.setDate(start.getDate() + 41); // 42 days total
+    end.setHours(23, 59, 59, 999);
+
+    return { viewStartDate: start, viewEndDate: end };
+  }, [currentMonth, currentYear]);
+
+  // Fetch holidays
   useEffect(() => {
     fetchHolidays(currentYear);
   }, [currentYear, fetchHolidays]);
 
-  if (!user) {
-    return <div>Please log in to view the leave calendar.</div>;
-  }
+  // Fetch Leave Types for Filter
+  const { data: leaveTypesData } = useQuery<{ leaveTypes: LeaveType[] }>(GET_LEAVE_TYPES);
+  const leaveTypes = leaveTypesData?.leaveTypes ?? [];
 
-  // Navigate to previous month
+  // Fetch Users for Filter (Manager/HR only)
+  const isManagerOrHr = user?.role === "manager" || user?.role === "hr";
+  const { data: usersData } = useQuery<{ users?: User[]; teamMembers?: User[] }>(
+    user?.role === "hr" ? GET_USERS : GET_TEAM_MEMBERS,
+    {
+      skip: !isManagerOrHr,
+      variables: user?.role === "manager" && user?.id ? { managerId: user.id } : undefined,
+    }
+  );
+  const employeeList: User[] | undefined =
+    user?.role === "hr" ? usersData?.users : usersData?.teamMembers;
+
+  // Fetch Leave Requests
+  const { data: leavesData, refetch: refetchLeaves } = useQuery<
+    { leaveRequests: CalendarLeaveRequest[] },
+    { startDate: Date; endDate: Date; userId?: string }
+  >(GET_LEAVE_REQUESTS, {
+    variables: {
+      startDate: viewStartDate,
+      endDate: viewEndDate,
+      ...(filterEmployee !== "all" ? { userId: filterEmployee } : {}),
+    },
+    fetchPolicy: "network-only", // Ensure fresh data
+  });
+
+  const leaveRequests = useMemo<CalendarLeaveRequest[]>(() => {
+    const requests = leavesData?.leaveRequests ?? [];
+
+    if (filterType === "all") {
+      return requests;
+    }
+
+    return requests.filter((req) => req.leaveType.id === filterType);
+  }, [leavesData, filterType]);
+
+  // Navigation
   const prevMonth = () => {
     const newDate = new Date(currentDate);
     newDate.setMonth(currentMonth - 1);
     setCurrentDate(newDate);
   };
 
-  // Navigate to next month
   const nextMonth = () => {
     const newDate = new Date(currentDate);
     newDate.setMonth(currentMonth + 1);
     setCurrentDate(newDate);
   };
 
-  // Navigate to today
   const goToToday = () => {
     setCurrentDate(new Date());
   };
 
-  // Get days in month
-  const getDaysInMonth = (year: number, month: number) => {
-    return new Date(year, month + 1, 0).getDate();
-  };
-
-  // Get day of week for first day of month (0 = Sunday, 1 = Monday, etc.)
-  const getFirstDayOfMonth = (year: number, month: number) => {
-    return new Date(year, month, 1).getDay();
-  };
-
-  // Generate calendar days
-  const generateCalendarDays = (): CalendarDay[] => {
-    const daysInMonth = getDaysInMonth(currentYear, currentMonth);
-    const firstDayOfMonth = getFirstDayOfMonth(currentYear, currentMonth);
-    const days: CalendarDay[] = [];
-
-    // Get previous month's days to fill in the first week
-    const prevMonthDays = getDaysInMonth(
-      currentMonth === 0 ? currentYear - 1 : currentYear,
-      currentMonth === 0 ? 11 : currentMonth - 1
-    );
-    
-    // Add days from previous month
-    for (let i = firstDayOfMonth - 1; i >= 0; i--) {
-      const date = new Date(
-        currentMonth === 0 ? currentYear - 1 : currentYear,
-        currentMonth === 0 ? 11 : currentMonth - 1,
-        prevMonthDays - i
-      );
-      days.push({
-        date,
-        isCurrentMonth: false,
-        isToday: false,
-        leaves: [],
-      });
+  // Generate Calendar Grid
+  const calendarDays = useMemo<CalendarDay[]>(() => {
+    if (!user) {
+      return [];
     }
 
-    // Add days from current month
-    const today = new Date();
-    for (let i = 1; i <= daysInMonth; i++) {
-      const date = new Date(currentYear, currentMonth, i);
-      const isToday =
-        today.getDate() === i &&
-        today.getMonth() === currentMonth &&
-        today.getFullYear() === currentYear;
+    const days: CalendarDay[] = [];
+    const iterDate = new Date(viewStartDate);
 
-      // Check for leaves on this day
-      const leaves = (mockLeaveRequests as unknown as MockLeaveRequest[])
-        .filter((leave) => {
-          // Only show approved leaves or those approved by manager
-          if (leave.status !== "approved" && leave.status !== "approved_by_manager") {
-            return false;
-          }
+    // We generate exactly 42 days
+    for (let i = 0; i < 42; i++) {
+      const date = new Date(iterDate);
+      const isCurrentMonth = date.getMonth() === currentMonth;
+      const isToday = new Date().toDateString() === date.toDateString();
 
-          // Filter by employee if in personal view
-          if (viewMode === "personal" && leave.employeeId !== user.id) {
-            return false;
-          }
+      // Find leaves for this day
+      const dayLeaves = leaveRequests.filter((leave) => {
+        const status = leave.status;
+        if (
+          (status === LeaveRequestStatus.CANCELLED ||
+            status === LeaveRequestStatus.MANAGER_REJECTED ||
+            status === LeaveRequestStatus.HR_REJECTED) &&
+          leave.user.id !== user.id
+        ) {
+          return false;
+        }
 
-          const startDate = new Date(leave.startDate);
-          const endDate = new Date(leave.endDate);
-          
-          // Check if this day falls within the leave period
-          return date >= startDate && date <= endDate;
-        })
-        .map((leave) => ({
-          id: leave.id,
-          employeeId: leave.employeeId,
-          employeeName: "Employee Name", // In a real app, you'd get the name from the employee record
-          leaveType: leave.leaveType,
-        }));
+        const start = new Date(leave.startDate);
+        const end = new Date(leave.endDate);
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        
+        return date >= start && date <= end;
+      });
 
-      // Check for holidays
+      // Find holiday
       const holiday = holidays.find((h) => {
-        const holidayDate = new Date(h.date);
-        return (
-          date.getDate() === holidayDate.getDate() &&
-          date.getMonth() === holidayDate.getMonth() &&
-          date.getFullYear() === holidayDate.getFullYear()
-        );
+        const hDate = new Date(h.date);
+        return hDate.toDateString() === date.toDateString();
       });
 
       days.push({
         date,
-        isCurrentMonth: true,
+        isCurrentMonth,
         isToday,
-        leaves,
+        leaves: dayLeaves,
         isHoliday: !!holiday,
         holidayName: holiday?.name,
       });
-    }
 
-    // Add days from next month to fill the last week
-    const remainingDays = 42 - days.length; // 6 rows of 7 days
-    for (let i = 1; i <= remainingDays; i++) {
-      const date = new Date(
-        currentMonth === 11 ? currentYear + 1 : currentYear,
-        currentMonth === 11 ? 0 : currentMonth + 1,
-        i
-      );
-      days.push({
-        date,
-        isCurrentMonth: false,
-        isToday: false,
-        leaves: [],
-      });
+      iterDate.setDate(iterDate.getDate() + 1);
     }
 
     return days;
-  };
+  }, [viewStartDate, currentMonth, leaveRequests, holidays, user]);
 
-  const calendarDays = generateCalendarDays();
+  if (!user) {
+    return <div>Please log in to view the leave calendar.</div>;
+  }
+
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
 
+  // Interactions
+  const handleDayClick = (date: Date) => {
+    setSelectedDate(date);
+    setIsRequestModalOpen(true);
+  };
+
+  const handleEventClick = (e: React.MouseEvent, leave: CalendarLeaveRequest) => {
+    e.stopPropagation();
+    setSelectedLeave(leave);
+    setIsDetailsModalOpen(true);
+  };
+
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
-      {/* Holiday Error Banner */}
+    <div className="bg-white shadow rounded-lg overflow-hidden flex flex-col h-full">
+      {/* Holiday Error */}
       {holidaysError && (
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-yellow-700">
-                Unable to load holidays. {holidaysError}
-              </p>
-            </div>
-          </div>
+          <p className="text-sm text-yellow-700">
+            Unable to load holidays. {holidaysError}
+          </p>
         </div>
       )}
 
-      <div className="px-4 py-5 sm:px-6 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-        <h2 className="text-lg font-medium text-gray-900">Leave Calendar</h2>
-        <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setViewMode("team")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md ${
-                viewMode === "team"
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Team View
-            </button>
-            <button
-              onClick={() => setViewMode("personal")}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md ${
-                viewMode === "personal"
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              Personal View
-            </button>
+      {/* Header & Filters */}
+      <div className="px-4 py-4 border-b border-gray-200 space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <h2 className="text-2xl font-bold text-gray-900">
+            {monthNames[currentMonth]} {currentYear}
+          </h2>
+          
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="sm" onClick={prevMonth}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" onClick={goToToday}>
+              Today
+            </Button>
+            <Button variant="outline" size="sm" onClick={nextMonth}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
-          <div className="flex space-x-2">
-            <Link
-              href="/dashboard/request-leave"
-              className="px-3 py-1.5 text-sm font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200"
-            >
-              Request Leave
-            </Link>
-            <Link
-              href="/dashboard"
-              className="px-3 py-1.5 text-sm font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
-            >
-              Dashboard
-            </Link>
+        </div>
+
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-gray-50">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <select
+                className="bg-transparent border-none text-sm focus:ring-0"
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+              >
+                <option value="all">All Leave Types</option>
+                {leaveTypes.map((type) => (
+                  <option key={type.id} value={type.id}>{type.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {isManagerOrHr && employeeList && (
+              <div className="flex items-center gap-2 border rounded-md px-3 py-2 bg-gray-50">
+                <Filter className="h-4 w-4 text-gray-500" />
+                <select
+                  className="bg-transparent border-none text-sm focus:ring-0"
+                  value={filterEmployee}
+                  onChange={(e) => setFilterEmployee(e.target.value)}
+                >
+                  <option value="all">All Employees</option>
+                  {employeeList.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.firstName} {emp.lastName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
+
+          {/* Actions */}
+          <Button 
+            onClick={() => {
+              setSelectedDate(new Date());
+              setIsRequestModalOpen(true);
+            }}
+            className="w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Request Leave
+          </Button>
         </div>
       </div>
 
-      <div className="border-t border-gray-200">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
-              {monthNames[currentMonth]} {currentYear}
-            </h3>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={prevMonth}
-              className="p-1.5 rounded-full hover:bg-gray-100"
-            >
-              <ChevronLeft className="h-5 w-5 text-gray-600" />
-            </button>
-            <button
-              onClick={goToToday}
-              className="px-3 py-1 text-sm font-medium text-blue-700 hover:bg-blue-50 rounded-md"
-            >
-              Today
-            </button>
-            <button
-              onClick={nextMonth}
-              className="p-1.5 rounded-full hover:bg-gray-100"
-            >
-              <ChevronRight className="h-5 w-5 text-gray-600" />
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-7 gap-px bg-gray-200">
-          {/* Day headers */}
+      {/* Calendar Grid */}
+      <div className="flex-1 overflow-auto">
+        {/* Day Headers */}
+        <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-            <div
-              key={day}
-              className="bg-gray-50 py-2 text-center text-sm font-medium text-gray-500"
-            >
+            <div key={day} className="py-2 text-center text-sm font-semibold text-gray-600">
               {day}
             </div>
           ))}
+        </div>
 
-          {/* Calendar days */}
+        {/* Days */}
+        <div className="grid grid-cols-7 auto-rows-fr">
           {calendarDays.map((day, index) => (
             <div
               key={index}
-              className={`min-h-[100px] p-2 ${
-                day.isCurrentMonth ? "bg-white" : "bg-gray-50 text-gray-400"
-              } ${day.isToday ? "border-2 border-blue-500" : ""}`}
+              onClick={() => handleDayClick(day.date)}
+              className={`
+                min-h-[120px] p-2 border-b border-r border-gray-100 transition-colors hover:bg-gray-50 cursor-pointer
+                ${!day.isCurrentMonth ? "bg-gray-50/50" : "bg-white"}
+                ${day.isToday ? "bg-blue-50/30" : ""}
+              `}
             >
-              <div className="flex justify-between items-start">
+              <div className="flex justify-between items-start mb-1">
                 <span
-                  className={`text-sm font-medium ${
-                    day.isToday ? "text-blue-600" : ""
-                  }`}
+                  className={`
+                    text-sm font-medium h-7 w-7 flex items-center justify-center rounded-full
+                    ${day.isToday ? "bg-blue-600 text-white" : day.isCurrentMonth ? "text-gray-700" : "text-gray-400"}
+                  `}
                 >
                   {day.date.getDate()}
                 </span>
                 {day.isHoliday && (
-                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                  <span title={day.holidayName} className="text-xs px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-medium">
                     Holiday
                   </span>
                 )}
               </div>
 
-              {day.isHoliday && (
-                <div className="mt-1 text-xs text-red-600 font-medium">
-                  {day.holidayName}
-                </div>
-              )}
-
-              <div className="mt-1 space-y-1">
+              <div className="space-y-1">
                 {day.leaves.map((leave) => (
                   <div
-                    key={`${leave.id}-${day.date}`}
-                    className={`text-xs px-1.5 py-0.5 rounded truncate ${
-                      leaveTypeColors[leave.leaveType]
-                    }`}
-                    title={`${leave.employeeName} - ${leave.leaveType}`}
+                    key={`${leave.id}-${day.date.toISOString()}`}
+                    onClick={(e) => handleEventClick(e, leave)}
+                    className={`
+                      text-xs px-2 py-1 rounded-md truncate border shadow-sm transition-all hover:opacity-80
+                      ${leave.status === LeaveRequestStatus.PENDING ? 'opacity-80 border-dashed' : ''}
+                    `}
+                    style={{ 
+                      backgroundColor: leave.leaveType.color || '#E5E7EB', 
+                      borderColor: leave.leaveType.color ? `${leave.leaveType.color}80` : '#D1D5DB',
+                      color: '#1F2937'
+                    }}
+                    title={`${leave.user.firstName} ${leave.user.lastName} - ${leave.leaveType.name} (${leave.status})`}
                   >
-                    {leave.employeeName}
+                    <span className="font-semibold mr-1">{leave.user.firstName}</span>
+                    <span className="opacity-75 hidden xl:inline">{leave.leaveType.name}</span>
                   </div>
                 ))}
               </div>
@@ -346,20 +345,26 @@ export default function LeaveCalendar() {
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="px-4 py-3 border-t border-gray-200">
-        <div className="text-sm font-medium text-gray-700 mb-2">Legend:</div>
-        <div className="flex flex-wrap gap-2">
-          {Object.entries(leaveTypeColors).map(([type, color]) => (
-            <div key={type} className="flex items-center">
-              <div className={`w-3 h-3 rounded ${color} mr-1`}></div>
-              <span className="text-xs text-gray-600 capitalize">{type}</span>
+      {/* Footer Legend */}
+      <div className="p-4 border-t border-gray-200 bg-gray-50">
+        <div className="flex flex-wrap gap-4 text-xs text-gray-600">
+          <div className="flex items-center">
+            <span className="w-3 h-3 rounded-full bg-red-100 border border-red-200 mr-2"></span>
+            Holiday
+          </div>
+          <div className="flex items-center">
+            <span className="w-3 h-3 rounded border border-gray-300 border-dashed mr-2"></span>
+            Pending Request
+          </div>
+          {leaveTypes.map((type) => (
+            <div key={type.id} className="flex items-center">
+              <span
+                className="w-3 h-3 rounded border mr-2"
+                style={{ backgroundColor: type.color, borderColor: `${type.color}80` }}
+              ></span>
+              {type.name}
             </div>
           ))}
-          <div className="flex items-center">
-            <div className="w-3 h-3 rounded bg-red-100 mr-1"></div>
-            <span className="text-xs text-gray-600">Holiday</span>
-          </div>
         </div>
       </div>
 
@@ -368,6 +373,29 @@ export default function LeaveCalendar() {
         holidays={holidays} 
         currentMonth={currentMonth} 
         currentYear={currentYear} 
+      />
+
+      {/* Modals */}
+      <LeaveRequestModal
+        isOpen={isRequestModalOpen}
+        onClose={() => setIsRequestModalOpen(false)}
+        onSuccess={() => {
+          refetchLeaves(); // Refresh data
+          setIsRequestModalOpen(false);
+        }}
+        initialDate={selectedDate}
+      />
+
+      <LeaveDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={() => {
+          setIsDetailsModalOpen(false);
+          setSelectedLeave(null);
+        }}
+        onSuccess={() => {
+          refetchLeaves(); // Refresh data
+        }}
+        leaveRequest={selectedLeave}
       />
     </div>
   );
